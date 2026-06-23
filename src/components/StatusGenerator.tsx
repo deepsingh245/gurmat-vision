@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateStatusImage } from '@/services/geminiService';
+import { generateStatusImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
@@ -32,17 +32,20 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
     setError(null);
     let spent = false;
     try {
+      const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
+      await checkContentPolicy(promptToUse);
       await spend(CREDIT_COSTS.IMAGE);
       spent = true;
-      const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
       const url = await generateStatusImage(promptToUse, size, '9:16');
       setImageUrl(url);
       if (user) {
         saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
       }
-    } catch {
+    } catch (e) {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
-      setError('Failed to generate image. Ensure you have a valid API key and try again.');
+      setError(e instanceof ContentRejectedError
+        ? e.message
+        : 'Failed to generate image. Please try again.');
     } finally {
       setLoading(false);
     }

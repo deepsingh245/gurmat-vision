@@ -1,4 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, type FunctionsError } from 'firebase/functions';
 import { functions } from '@/firebase/config';
 import type { HukumnamaData, GeneratedPost, GurbaniQuote, VoiceIntentResult } from '@/types';
 
@@ -8,6 +8,34 @@ import type { HukumnamaData, GeneratedPost, GurbaniQuote, VoiceIntentResult } fr
 function call<Req, Res>(name: string, timeoutMs?: number) {
   return httpsCallable<Req, Res>(functions, name, timeoutMs ? { timeout: timeoutMs } : undefined);
 }
+
+// ─── Content moderation pre-check ────────────────────────────────────────────
+// Call this BEFORE deducting credits so rejected prompts never cost the user.
+// Throws a ContentRejectedError if the prompt violates the content policy.
+
+export class ContentRejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContentRejectedError';
+  }
+}
+
+export const checkContentPolicy = async (prompt: string): Promise<void> => {
+  try {
+    const fn = call<{ prompt: string }, { safe: boolean; reason: string }>('moderateContent');
+    await fn({ prompt });
+  } catch (e) {
+    const fe = e as FunctionsError;
+    if (fe.code === 'functions/permission-denied') {
+      // Strip the "Content rejected: " prefix for a clean UI message
+      const raw = fe.message ?? 'This content cannot be generated.';
+      const clean = raw.replace(/^Content rejected:\s*/i, '');
+      throw new ContentRejectedError(clean);
+    }
+    // Any other error (network, etc.) — let generation proceed; server-side
+    // moderation inside the generation function is the hard gate.
+  }
+};
 
 // ─── Hukumnama ────────────────────────────────────────────────────────────────
 

@@ -3,11 +3,12 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { fetchHukumnamaWithGemini } from '@/services/geminiService';
 import type { HukumnamaData } from '@/types';
 
-import AuthPage       from '@/pages/AuthPage';
-import ProfilePage    from '@/pages/ProfilePage';
-import CreditsPage    from '@/pages/CreditsPage';
-import CreationsPage  from '@/pages/CreationsPage';
-import SettingsPage   from '@/pages/SettingsPage';
+import AuthPage            from '@/pages/AuthPage';
+import ProfilePage         from '@/pages/ProfilePage';
+import CreditsPage         from '@/pages/CreditsPage';
+import CreationsPage       from '@/pages/CreationsPage';
+import SettingsPage        from '@/pages/SettingsPage';
+import ContentPolicyPage   from '@/pages/ContentPolicyPage';
 
 import HukumnamaView      from '@/components/HukumnamaView';
 import StatusGenerator    from '@/components/StatusGenerator';
@@ -21,7 +22,7 @@ import Button             from '@/components/Button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings';
+type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy';
 
 const STUDIO_TABS = [
   { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
@@ -213,15 +214,22 @@ const AppShell: React.FC = () => {
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {page === 'studio'    && <Studio />}
-        {page === 'profile'   && <ProfilePage   onBack={goBack} />}
-        {page === 'credits'   && <CreditsPage   onBack={goBack} />}
-        {page === 'creations' && <CreationsPage onBack={goBack} />}
-        {page === 'settings'  && <SettingsPage  onBack={goBack} />}
+        {page === 'profile'   && <ProfilePage        onBack={goBack} />}
+        {page === 'credits'   && <CreditsPage        onBack={goBack} />}
+        {page === 'creations' && <CreationsPage      onBack={goBack} />}
+        {page === 'settings'  && <SettingsPage       onBack={goBack} />}
+        {page === 'policy'    && <ContentPolicyPage  onBack={goBack} />}
       </main>
 
       <footer className="text-center text-gray-400 text-sm py-8">
         <p>© {new Date().getFullYear()} Hukumnama AI Studio. Powered by Google Gemini.</p>
         <p className="text-xs mt-1 opacity-50">AI-generated content should be verified for accuracy.</p>
+        <button
+          onClick={() => setPage('policy')}
+          className="text-xs mt-2 text-saffron-500 hover:text-saffron-600 underline underline-offset-2"
+        >
+          Content Policy
+        </button>
       </footer>
     </div>
   );

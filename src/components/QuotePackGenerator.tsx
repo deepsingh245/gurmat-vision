@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateQuotePack, generateStatusImage, generateBackgroundVideo } from '@/services/geminiService';
+import { generateQuotePack, generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
@@ -30,13 +30,14 @@ const QuotePackGenerator: React.FC = () => {
     setMediaUrls({});
     let spent = false;
     try {
+      await checkContentPolicy(topic);
       await spend(CREDIT_COSTS.QUOTE_PACK);
       spent = true;
       const data = await generateQuotePack(topic, 5);
       setQuotes(data);
-    } catch {
+    } catch (e) {
       if (spent) await refund(CREDIT_COSTS.QUOTE_PACK);
-      setError('Failed to generate quotes. Please try again.');
+      setError(e instanceof ContentRejectedError ? e.message : 'Failed to generate quotes. Please try again.');
     } finally {
       setLoading(false);
     }

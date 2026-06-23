@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { generateBackgroundVideo, generateVideoFromImage } from '@/services/geminiService';
+import { generateBackgroundVideo, generateVideoFromImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_VIDEO_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
@@ -33,22 +33,28 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
     setError(null);
     let spent = false;
     try {
+      const effectivePrompt = mode === 'text-to-video'
+        ? (customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || 'Spiritual ambiance'))
+        : (customPrompt || 'Animate this peacefully');
+      await checkContentPolicy(effectivePrompt);
       await spend(CREDIT_COSTS.VIDEO);
       spent = true;
       let url = '';
       if (mode === 'text-to-video') {
-        const prompt = customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || 'Spiritual ambiance');
+        const prompt = effectivePrompt;
         url = await generateBackgroundVideo(prompt, '9:16');
         if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       } else if (mode === 'image-to-video' && uploadedImage) {
-        const prompt = customPrompt || 'Animate this peacefully';
+        const prompt = effectivePrompt;
         url = await generateVideoFromImage(uploadedImage, prompt, '9:16');
         if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       }
       setVideoUrl(url);
-    } catch {
+    } catch (e) {
       if (spent) await refund(CREDIT_COSTS.VIDEO);
-      setError('Video generation failed. Ensure you have a valid API key with Veo access.');
+      setError(e instanceof ContentRejectedError
+        ? e.message
+        : 'Video generation failed. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'crypto';
+import { moderatePrompt } from './moderation';
 
 admin.initializeApp();
 
@@ -65,7 +66,6 @@ function extractJson(text: string): string {
   return text.trim();
 }
 
-// Uploads a buffer to Firebase Storage and returns a permanent download URL.
 async function uploadToStorage(
   buffer: Buffer,
   filePath: string,
@@ -84,7 +84,23 @@ async function uploadToStorage(
   return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${token}`;
 }
 
-// ─── getHukumnama ─────────────────────────────────────────────────────────────
+// ─── moderateContent — standalone callable for client pre-checks ──────────────
+
+interface ModerateRequest { prompt: string }
+
+export const moderateContent = onCall(
+  { secrets: [geminiKey] },
+  async (request) => {
+    const uid = requireAuth(request);
+    const { prompt } = request.data as ModerateRequest;
+    if (!prompt?.trim()) return { safe: true, reason: '' };
+    // Throws permission-denied if rejected (client catches it)
+    await moderatePrompt(prompt, uid, getAi());
+    return { safe: true, reason: '' };
+  }
+);
+
+// ─── getHukumnama — fixed system prompt, no user input, no moderation needed ──
 
 export const getHukumnama = onCall(
   { secrets: [geminiKey] },
@@ -113,6 +129,9 @@ export const generateImage = onCall(
   async (request) => {
     const uid = requireAuth(request);
     const { prompt, size = '1K', aspectRatio = '9:16' } = request.data as GenerateImageRequest;
+
+    await moderatePrompt(prompt, uid, getAi());
+
     const client = getAi();
     const isHighRes = size === '2K' || size === '4K';
     const model = isHighRes ? MODEL.IMAGE_PRO : MODEL.IMAGE_FLASH;
@@ -151,8 +170,10 @@ export const generateVideo = onCall(
   async (request) => {
     const uid = requireAuth(request);
     const { prompt, aspectRatio = '9:16' } = request.data as GenerateVideoRequest;
-    const client = getAi();
 
+    await moderatePrompt(prompt, uid, getAi());
+
+    const client = getAi();
     let operation = await client.models.generateVideos({
       model: MODEL.VIDEO,
       prompt,
@@ -197,8 +218,9 @@ export const generateVideoFromImage = onCall(
       aspectRatio = '9:16',
     } = request.data as GenerateVideoFromImageRequest;
 
-    const client = getAi();
+    await moderatePrompt(prompt, uid, getAi());
 
+    const client = getAi();
     let operation = await client.models.generateVideos({
       model: MODEL.VIDEO,
       prompt: prompt || 'Animate this scene naturally',
@@ -273,10 +295,12 @@ interface GenerateQuotePackRequest {
 export const generateQuotePack = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    requireAuth(request);
+    const uid = requireAuth(request);
     const { topic, count = 5 } = request.data as GenerateQuotePackRequest;
-    const client = getAi();
 
+    await moderatePrompt(topic, uid, getAi());
+
+    const client = getAi();
     const prompt = `
 Generate ${count} distinct Gurbani quotes related to the topic: "${topic}".
 Return a JSON array where each object has:
@@ -297,7 +321,7 @@ Return a JSON array where each object has:
   }
 );
 
-// ─── processVoice ─────────────────────────────────────────────────────────────
+// ─── processVoice — intent parsing only, no content generation ───────────────
 
 interface ProcessVoiceRequest {
   audioBase64: string;

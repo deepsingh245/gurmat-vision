@@ -5,7 +5,7 @@ import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveGeneration } from '@/firebase/firestore';
-import { generateStatusImage, generateBackgroundVideo } from '@/services/geminiService';
+import { generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import Button from './Button';
 
 // ─── Prompt interpolation ─────────────────────────────────────────────────────
@@ -62,9 +62,10 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     setResult(null);
     let spent = false;
     try {
+      const prompt = interpolate(template.promptTemplate, vars);
+      await checkContentPolicy(prompt);
       await spend(cost);
       spent = true;
-      const prompt = interpolate(template.promptTemplate, vars);
       let url: string;
       if (isVideo) {
         url = await generateBackgroundVideo(prompt, '9:16');
@@ -76,7 +77,9 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
       setResult(url);
     } catch (e) {
       if (spent) await refund(cost);
-      setError(isVideo ? 'Video generation failed. Please try again.' : 'Image generation failed. Please try again.');
+      setError(e instanceof ContentRejectedError
+        ? e.message
+        : isVideo ? 'Video generation failed. Please try again.' : 'Image generation failed. Please try again.');
       console.error(e);
     } finally {
       setLoading(false);

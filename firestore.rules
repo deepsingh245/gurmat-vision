@@ -30,5 +30,11 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
       allow read, update, delete: if false;
     }
+
+    // Refusals: written exclusively by Cloud Functions (Admin SDK bypasses rules).
+    // No client access — reviewed via admin tooling only.
+    match /refusals/{refusalId} {
+      allow read, write: if false;
+    }
   }
 }
