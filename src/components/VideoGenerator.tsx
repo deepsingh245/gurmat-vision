@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { generateBackgroundVideo, generateVideoFromImage } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
-import { DEFAULT_VIDEO_PROMPT_TEMPLATE } from '@/constants';
+import { DEFAULT_VIDEO_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
+import { useCredits } from '@/hooks/useCredits';
 import Button from './Button';
 
 interface VideoGeneratorProps {
@@ -9,46 +10,59 @@ interface VideoGeneratorProps {
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
-  const [loading, setLoading] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [customPrompt, setCustomPrompt] = useState('');
-  const [mode, setMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video');
+  const { credits, canAfford, spend, refund } = useCredits();
+
+  const [loading, setLoading]             = useState(false);
+  const [videoUrl, setVideoUrl]           = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt]   = useState('');
+  const [mode, setMode]                   = useState<'text-to-video' | 'image-to-video'>('text-to-video');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError]                 = useState<string | null>(null);
+  const fileInputRef                      = useRef<HTMLInputElement>(null);
 
   const handleGenerate = async () => {
+    if (!canAfford(CREDIT_COSTS.VIDEO)) {
+      setError(`Not enough credits. You need ${CREDIT_COSTS.VIDEO} but have ${credits}.`);
+      return;
+    }
     setLoading(true);
     setVideoUrl(null);
     setError(null);
+    let spent = false;
     try {
+      await spend(CREDIT_COSTS.VIDEO);
+      spent = true;
       let url = '';
       if (mode === 'text-to-video') {
-        const promptToUse = customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || "Spiritual ambiance");
-        url = await generateBackgroundVideo(promptToUse, '9:16');
+        const prompt = customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || 'Spiritual ambiance');
+        url = await generateBackgroundVideo(prompt, '9:16');
       } else if (mode === 'image-to-video' && uploadedImage) {
-        const promptToUse = customPrompt || "Animate this peacefully";
-        url = await generateVideoFromImage(uploadedImage, promptToUse, '9:16');
+        const prompt = customPrompt || 'Animate this peacefully';
+        url = await generateVideoFromImage(uploadedImage, prompt, '9:16');
       }
       setVideoUrl(url);
     } catch {
-      setError("Video generation failed. Ensure you have a valid API key with Veo access and try again.");
+      if (spent) await refund(CREDIT_COSTS.VIDEO);
+      setError('Video generation failed. Ensure you have a valid API key with Veo access.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) setUploadedImage(e.target.files[0]);
+    if (e.target.files?.[0]) setUploadedImage(e.target.files[0]);
   };
 
   return (
     <div className="grid md:grid-cols-2 gap-8">
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-2xl">🎥</span> Video Studio
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span className="text-2xl">🎥</span> Video Studio
+            </h3>
+            <span className="text-xs text-gray-400">⭐ {credits} credits</span>
+          </div>
 
           <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg">
             <button
@@ -82,7 +96,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
                   className="hidden"
                 />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full text-sm">
-                  {uploadedImage ? uploadedImage.name : "Upload Reference Image"}
+                  {uploadedImage ? uploadedImage.name : 'Upload Reference Image'}
                 </Button>
               </div>
             )}
@@ -92,14 +106,19 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-saffron-500 outline-none"
                 rows={4}
-                placeholder={mode === 'image-to-video' ? "Describe how to animate the image..." : "Describe the scene (e.g., Golden Temple holy pond)..."}
+                placeholder={mode === 'image-to-video' ? 'Describe how to animate the image...' : 'Describe the scene (e.g., Golden Temple holy pond)...'}
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
               />
             </div>
 
-            <Button onClick={handleGenerate} isLoading={loading} disabled={mode === 'image-to-video' && !uploadedImage} className="w-full">
-              {loading ? 'Generating Veo Video...' : 'Generate Video'}
+            <Button
+              onClick={handleGenerate}
+              isLoading={loading}
+              disabled={mode === 'image-to-video' && !uploadedImage}
+              className="w-full"
+            >
+              {loading ? 'Generating Veo Video...' : `Generate Video — ${CREDIT_COSTS.VIDEO} credits`}
             </Button>
 
             <div className="bg-yellow-50 p-3 rounded-lg text-xs text-yellow-800 border border-yellow-200">
@@ -109,13 +128,13 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         </div>
       </div>
 
-      <div className="bg-gray-100 rounded-2xl flex items-center justify-center min-h-[500px] relative overflow-hidden shadow-inner border border-gray-200">
+      <div className="bg-gray-100 rounded-2xl flex items-center justify-center min-h-125 relative overflow-hidden shadow-inner border border-gray-200">
         {videoUrl ? (
           <div className="relative h-full w-full flex items-center justify-center p-4">
-            <div className="relative aspect-[9/16] h-full max-h-[600px] shadow-2xl rounded-lg overflow-hidden bg-black">
+            <div className="relative aspect-9/16 h-full max-h-150 shadow-2xl rounded-lg overflow-hidden bg-black">
               <video src={videoUrl} controls autoPlay loop className="w-full h-full object-cover" />
               {hukumnama && (
-                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                <div className="absolute bottom-0 left-0 right-0 p-6 bg-linear-to-t from-black/80 to-transparent pointer-events-none">
                   <p className="text-white font-gurmukhi text-center text-sm drop-shadow-lg mb-2 line-clamp-4">
                     {hukumnama.gurmukhi}
                   </p>

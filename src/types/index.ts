@@ -55,6 +55,7 @@ export interface GurbaniQuote {
 }
 
 export type UserPlan = 'free';
+export type UserLanguage = 'english' | 'punjabi';
 
 export interface UserDocument {
   uid: string;
@@ -64,6 +65,7 @@ export interface UserDocument {
   plan: UserPlan;
   credits: number;
   lastDailyBonus: string | null;
+  language: UserLanguage;
   createdAt: unknown;
 }
 

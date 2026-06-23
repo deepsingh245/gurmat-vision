@@ -1,3 +1,10 @@
+export const CREDIT_COSTS = {
+  IMAGE:      1,
+  QUOTE_CARD: 1,
+  QUOTE_PACK: 1,
+  VIDEO:      10,
+} as const;
+
 export const MODEL_NAMES = {
   TEXT: 'gemini-2.5-flash',
   IMAGE_FLASH: 'gemini-2.5-flash-image',

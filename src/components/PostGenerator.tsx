@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { HukumnamaData, GeneratedPost } from '@/types';
-import { SOCIAL_TEMPLATES } from '@/constants';
+import { SOCIAL_TEMPLATES, CREDIT_COSTS } from '@/constants';
 import { generateSocialPost, generateStatusImage } from '@/services/geminiService';
+import { useCredits } from '@/hooks/useCredits';
 import Button from './Button';
 
 interface PostGeneratorProps {
@@ -9,25 +10,35 @@ interface PostGeneratorProps {
 }
 
 const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
+  const { credits, canAfford, spend, refund } = useCredits();
+
   const [selectedTemplate, setSelectedTemplate] = useState(SOCIAL_TEMPLATES[0].id);
-  const [language, setLanguage] = useState('English');
-  const [loading, setLoading] = useState(false);
-  const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [imgLoading, setImgLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage]                 = useState('English');
+  const [loading, setLoading]                   = useState(false);
+  const [generatedPost, setGeneratedPost]       = useState<GeneratedPost | null>(null);
+  const [generatedImage, setGeneratedImage]     = useState<string | null>(null);
+  const [imgLoading, setImgLoading]             = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
 
   const handleGenerateText = async () => {
     if (!hukumnama) return;
+    if (!canAfford(CREDIT_COSTS.QUOTE_CARD)) {
+      setError(`Not enough credits. You need ${CREDIT_COSTS.QUOTE_CARD} but have ${credits}.`);
+      return;
+    }
     setLoading(true);
     setError(null);
     setGeneratedImage(null);
+    let spent = false;
     try {
+      await spend(CREDIT_COSTS.QUOTE_CARD);
+      spent = true;
       const template = SOCIAL_TEMPLATES.find(t => t.id === selectedTemplate);
       const post = await generateSocialPost(hukumnama, template?.stylePrompt || '', language);
       setGeneratedPost(post);
     } catch {
-      setError("Failed to generate post text. Please try again.");
+      if (spent) await refund(CREDIT_COSTS.QUOTE_CARD);
+      setError('Failed to generate post text. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -35,13 +46,21 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
 
   const handleGenerateImage = async () => {
     if (!generatedPost) return;
+    if (!canAfford(CREDIT_COSTS.IMAGE)) {
+      setError(`Not enough credits. You need ${CREDIT_COSTS.IMAGE} but have ${credits}.`);
+      return;
+    }
     setImgLoading(true);
     setError(null);
+    let spent = false;
     try {
+      await spend(CREDIT_COSTS.IMAGE);
+      spent = true;
       const url = await generateStatusImage(generatedPost.imagePrompt, '1K', '1:1');
       setGeneratedImage(url);
     } catch {
-      setError("Failed to generate image. Please try again.");
+      if (spent) await refund(CREDIT_COSTS.IMAGE);
+      setError('Failed to generate image. Please try again.');
     } finally {
       setImgLoading(false);
     }
@@ -51,7 +70,10 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     <div className="grid md:grid-cols-2 gap-8 animate-fade-in-up">
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">✍️ Create Hukumnama Post</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800">✍️ Create Post</h3>
+            <span className="text-xs text-gray-400">⭐ {credits} credits</span>
+          </div>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -92,7 +114,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
             </div>
 
             <Button onClick={handleGenerateText} isLoading={loading} disabled={!hukumnama} className="w-full">
-              Generate Text
+              Generate Text — {CREDIT_COSTS.QUOTE_CARD} credit
             </Button>
           </div>
         </div>
@@ -101,7 +123,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <h4 className="font-bold text-gray-800 mb-2">Generated Content</h4>
             <input className="w-full font-bold text-lg mb-2 border-b border-transparent hover:border-gray-200 outline-none" value={generatedPost.title} readOnly />
-            <textarea className="w-full text-sm text-gray-600 min-h-[100px] mb-2 outline-none resize-none" value={generatedPost.body} readOnly />
+            <textarea className="w-full text-sm text-gray-600 min-h-25 mb-2 outline-none resize-none" value={generatedPost.body} readOnly />
             <div className="text-blue-600 text-sm mb-4">{generatedPost.hashtags.join(' ')}</div>
 
             <div className="flex gap-2">
@@ -109,14 +131,14 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
                 Copy Text
               </Button>
               <Button variant="primary" onClick={handleGenerateImage} isLoading={imgLoading} className="flex-1 text-xs">
-                Generate Image
+                Image — {CREDIT_COSTS.IMAGE} credit
               </Button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-gray-100 rounded-2xl flex items-center justify-center min-h-[500px] relative overflow-hidden shadow-inner border border-gray-200">
+      <div className="bg-gray-100 rounded-2xl flex items-center justify-center min-h-125 relative overflow-hidden shadow-inner border border-gray-200">
         {generatedImage ? (
           <div className="relative w-full max-w-sm aspect-square shadow-2xl bg-white p-2">
             <img src={generatedImage} alt="Post Background" className="w-full h-full object-cover" />

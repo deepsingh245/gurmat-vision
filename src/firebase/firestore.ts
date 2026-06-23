@@ -10,6 +10,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -31,6 +32,7 @@ export const createUserDocument = async (user: User): Promise<void> => {
     plan:           'free',
     credits:        10,
     lastDailyBonus: null,
+    language:       'english',
     createdAt:      serverTimestamp(),
   });
 };
@@ -47,14 +49,24 @@ export const updateUserDocument = async (uid: string, data: Partial<UserDocument
 // ─── Credits ──────────────────────────────────────────────────────────────────
 
 export const deductCredits = async (uid: string, amount: number): Promise<void> => {
-  const ref = doc(db, 'users', uid);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error('User not found');
+  await runTransaction(db, async (tx) => {
+    const ref  = doc(db, 'users', uid);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('User not found');
+    const current = (snap.data() as UserDocument).credits;
+    if (current < amount) throw new Error('Insufficient credits');
+    tx.update(ref, { credits: current - amount });
+  });
+};
 
-  const current = (snap.data() as UserDocument).credits;
-  if (current < amount) throw new Error('Insufficient credits');
-
-  await updateDoc(ref, { credits: current - amount });
+export const refundCredits = async (uid: string, amount: number): Promise<void> => {
+  await runTransaction(db, async (tx) => {
+    const ref  = doc(db, 'users', uid);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const current = (snap.data() as UserDocument).credits;
+    tx.update(ref, { credits: current + amount });
+  });
 };
 
 export const grantDailyBonus = async (uid: string): Promise<boolean> => {
