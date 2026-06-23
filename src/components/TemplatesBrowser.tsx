@@ -75,6 +75,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         if (user) saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
       }
       setResult(url);
+      window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       if (spent) await refund(cost);
       setError(e instanceof ContentRejectedError

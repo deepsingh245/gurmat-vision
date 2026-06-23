@@ -134,3 +134,22 @@ export const getUserGenerations = async (
 export const softDeleteGeneration = async (generationId: string): Promise<void> => {
   await updateDoc(doc(db, 'generations', generationId), { deleted: true });
 };
+
+// ─── Ad events ────────────────────────────────────────────────────────────────
+
+export type AdEventType = 'impression' | 'click';
+export type AdUnit = 'banner' | 'interstitial' | 'rewarded';
+
+export const logAdEvent = async (
+  userId: string,
+  type: AdEventType,
+  adUnit: AdUnit,
+): Promise<void> => {
+  await addDoc(collection(db, 'adEvents'), {
+    userId,
+    type,
+    adUnit,
+    date: new Date().toISOString().split('T')[0],
+    createdAt: serverTimestamp(),
+  });
+};

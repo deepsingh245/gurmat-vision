@@ -4,6 +4,7 @@ import * as admin from 'firebase-admin';
 import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'crypto';
 import { moderatePrompt } from './moderation';
+export { grantAdReward } from './ads';
 
 admin.initializeApp();
 

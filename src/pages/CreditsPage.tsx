@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { grantDailyBonus } from '@/firebase/firestore';
 import Button from '@/components/Button';
+import WatchAdButton from '@/components/WatchAdButton';
 
 interface CreditsPageProps {
   onBack: () => void;
@@ -74,19 +75,8 @@ const CreditsPage: React.FC<CreditsPageProps> = ({ onBack }) => {
           <p className="text-sm text-center text-green-700">{claimMsg}</p>
         )}
 
-        {/* Watch ad — placeholder for Phase 9 */}
-        <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <div>
-            <p className="font-semibold text-blue-800 text-sm">Watch an Ad</p>
-            <p className="text-xs text-blue-600">+5 credits per rewarded video</p>
-          </div>
-          <button
-            disabled
-            className="text-xs py-1.5 px-3 rounded-lg bg-blue-100 text-blue-400 cursor-not-allowed font-semibold"
-          >
-            Coming Soon
-          </button>
-        </div>
+        {/* Watch rewarded ad */}
+        <WatchAdButton onSuccess={() => setClaimMsg(null)} />
       </div>
 
       {/* Cost table */}

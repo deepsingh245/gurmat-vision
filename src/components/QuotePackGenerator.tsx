@@ -65,6 +65,7 @@ const QuotePackGenerator: React.FC = () => {
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], vid: url } }));
         if (user) saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
       }
+      window.dispatchEvent(new Event('generation-complete'));
     } catch {
       if (spent) await refund(cost);
       setError(`Failed to generate ${type}. Please try again.`);

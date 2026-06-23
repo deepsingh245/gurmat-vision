@@ -65,6 +65,8 @@ export interface UserDocument {
   plan: UserPlan;
   credits: number;
   lastDailyBonus: string | null;
+  lastAdReward: string | null;   // 'YYYY-MM-DD' of last rewarded ad
+  adRewardsToday: number;        // resets each day, max 3
   language: UserLanguage;
   createdAt: unknown;
 }

@@ -19,6 +19,10 @@ import TemplatesBrowser   from '@/components/TemplatesBrowser';
 import VoiceCommand       from '@/components/VoiceCommand';
 import Tabs               from '@/components/Tabs';
 import Button             from '@/components/Button';
+import BannerAd           from '@/components/BannerAd';
+import InterstitialModal  from '@/components/InterstitialModal';
+
+const INTERSTITIAL_EVERY = 5;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,7 +162,21 @@ const Studio: React.FC = () => {
 
 const AppShell: React.FC = () => {
   const { user, userDoc, loading } = useAuth();
-  const [page, setPage]   = useState<Page>('studio');
+  const [page, setPage]             = useState<Page>('studio');
+  const [showInterstitial, setShowInterstitial] = useState(false);
+  const genCountRef = useRef(0);
+
+  // Listen for generation-complete events dispatched by any generator
+  useEffect(() => {
+    const handler = () => {
+      genCountRef.current += 1;
+      if (genCountRef.current % INTERSTITIAL_EVERY === 0) {
+        setShowInterstitial(true);
+      }
+    };
+    window.addEventListener('generation-complete', handler);
+    return () => window.removeEventListener('generation-complete', handler);
+  }, []);
 
   if (loading) {
     return (
@@ -174,6 +192,10 @@ const AppShell: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-20">
+      {showInterstitial && (
+        <InterstitialModal onClose={() => setShowInterstitial(false)} />
+      )}
+
       <header className="bg-navy-900 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
           <button
@@ -213,10 +235,24 @@ const AppShell: React.FC = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {page === 'studio'    && <Studio />}
+        {page === 'studio' && (
+          <>
+            <Studio />
+            <div className="mt-8">
+              <BannerAd slot="studio-bottom" format="horizontal" />
+            </div>
+          </>
+        )}
         {page === 'profile'   && <ProfilePage        onBack={goBack} />}
         {page === 'credits'   && <CreditsPage        onBack={goBack} />}
-        {page === 'creations' && <CreationsPage      onBack={goBack} />}
+        {page === 'creations' && (
+          <>
+            <CreationsPage onBack={goBack} />
+            <div className="mt-4 mb-8 max-w-5xl mx-auto px-4">
+              <BannerAd slot="creations-bottom" format="horizontal" />
+            </div>
+          </>
+        )}
         {page === 'settings'  && <SettingsPage       onBack={goBack} />}
         {page === 'policy'    && <ContentPolicyPage  onBack={goBack} />}
       </main>

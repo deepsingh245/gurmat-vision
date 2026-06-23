@@ -41,6 +41,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
       if (user) {
         saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
       }
+      window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError(e instanceof ContentRejectedError

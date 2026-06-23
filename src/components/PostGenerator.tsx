@@ -64,6 +64,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       if (user) {
         saveGeneration(user.uid, 'poster', generatedPost.imagePrompt, url, CREDIT_COSTS.IMAGE).catch(() => {});
       }
+      window.dispatchEvent(new Event('generation-complete'));
     } catch {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError('Failed to generate image. Please try again.');

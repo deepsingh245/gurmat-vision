@@ -50,6 +50,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       }
       setVideoUrl(url);
+      window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       if (spent) await refund(CREDIT_COSTS.VIDEO);
       setError(e instanceof ContentRejectedError
