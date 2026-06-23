@@ -54,6 +54,32 @@ export interface GurbaniQuote {
   videoPrompt: string;
 }
 
+export type UserPlan = 'free';
+
+export interface UserDocument {
+  uid: string;
+  name: string;
+  email: string;
+  photoUrl: string;
+  plan: UserPlan;
+  credits: number;
+  lastDailyBonus: string | null;
+  createdAt: unknown;
+}
+
+export type GenerationType = 'quote-card' | 'poster' | 'reel' | 'image' | 'video';
+
+export interface Generation {
+  id?: string;
+  userId: string;
+  type: GenerationType;
+  prompt: string;
+  resultUrl: string;
+  creditsUsed: number;
+  createdAt: unknown;
+  deleted?: boolean;
+}
+
 export interface VoiceIntentResult {
   transcript: string;
   intent: 'create_hukumnama_post' | 'create_quote_pack' | 'create_status_image' | 'create_video' | 'unknown';

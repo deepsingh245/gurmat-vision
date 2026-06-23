@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { fetchHukumnamaWithGemini } from './services/geminiService';
-import { HukumnamaData } from './types';
-import HukumnamaView from './components/HukumnamaView';
-import StatusGenerator from './components/StatusGenerator';
-import VideoGenerator from './components/VideoGenerator';
-import PostGenerator from './components/PostGenerator';
-import QuotePackGenerator from './components/QuotePackGenerator';
-import VoiceCommand from './components/VoiceCommand';
-import Tabs from './components/Tabs';
-import Button from './components/Button';
+import { fetchHukumnamaWithGemini } from '@/services/geminiService';
+import { HukumnamaData } from '@/types';
+import HukumnamaView from '@/components/HukumnamaView';
+import StatusGenerator from '@/components/StatusGenerator';
+import VideoGenerator from '@/components/VideoGenerator';
+import PostGenerator from '@/components/PostGenerator';
+import QuotePackGenerator from '@/components/QuotePackGenerator';
+import VoiceCommand from '@/components/VoiceCommand';
+import Tabs from '@/components/Tabs';
+import Button from '@/components/Button';
+
+const TABS = [
+  { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
+  { id: 'voice', label: 'Voice Mode', icon: '🎙️' },
+  { id: 'post', label: 'Social Posts', icon: '✍️' },
+  { id: 'quotes', label: 'Quote Packs', icon: '🌿' },
+  { id: 'status', label: 'Status Img', icon: '🖼️' },
+  { id: 'video', label: 'Video Studio', icon: '🎥' },
+];
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('hukumnama');
   const [hukumnama, setHukumnama] = useState<HukumnamaData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initial Fetch
   useEffect(() => {
-    const loadData = async () => {
+    const load = async () => {
       try {
         const data = await fetchHukumnamaWithGemini();
         setHukumnama(data);
@@ -27,12 +35,11 @@ const App: React.FC = () => {
         setLoading(false);
       }
     };
-    loadData();
+    load();
   }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-20">
-      {/* Header */}
       <header className="bg-navy-900 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -44,8 +51,8 @@ const App: React.FC = () => {
               <p className="text-xs text-saffron-200">AI Powered • Veo • Gemini 2.5</p>
             </div>
           </div>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             className="hidden sm:flex text-sm py-1 px-3"
             onClick={() => window.location.reload()}
           >
@@ -54,31 +61,15 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-8">
-        
-        {/* Navigation */}
         <div className="overflow-x-auto pb-2">
-          <Tabs 
-            activeTab={activeTab} 
-            onTabChange={setActiveTab} 
-            tabs={[
-              { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
-              { id: 'voice', label: 'Voice Mode', icon: '🎙️' },
-              { id: 'post', label: 'Social Posts', icon: '✍️' },
-              { id: 'quotes', label: 'Quote Packs', icon: '🌿' },
-              { id: 'status', label: 'Status Img', icon: '🖼️' },
-              { id: 'video', label: 'Video Studio', icon: '🎥' },
-            ]} 
-          />
+          <Tabs activeTab={activeTab} onTabChange={setActiveTab} tabs={TABS} />
         </div>
 
-        {/* Views */}
         <div className="transition-all duration-300">
           {activeTab === 'hukumnama' && (
             <div className="animate-fade-in-up">
               <HukumnamaView data={hukumnama} loading={loading} />
-              
               {!loading && (
                 <div className="mt-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('post')}>
@@ -97,30 +88,14 @@ const App: React.FC = () => {
               )}
             </div>
           )}
-
-          {activeTab === 'voice' && (
-             <VoiceCommand />
-          )}
-
-          {activeTab === 'post' && (
-             <PostGenerator hukumnama={hukumnama} />
-          )}
-
-          {activeTab === 'quotes' && (
-             <QuotePackGenerator />
-          )}
-
-          {activeTab === 'status' && (
-             <StatusGenerator hukumnama={hukumnama} />
-          )}
-
-          {activeTab === 'video' && (
-             <VideoGenerator hukumnama={hukumnama} />
-          )}
+          {activeTab === 'voice' && <VoiceCommand />}
+          {activeTab === 'post' && <PostGenerator hukumnama={hukumnama} />}
+          {activeTab === 'quotes' && <QuotePackGenerator />}
+          {activeTab === 'status' && <StatusGenerator hukumnama={hukumnama} />}
+          {activeTab === 'video' && <VideoGenerator hukumnama={hukumnama} />}
         </div>
       </main>
-      
-      {/* Footer */}
+
       <footer className="text-center text-gray-400 text-sm py-8">
         <p>© {new Date().getFullYear()} Hukumnama AI Studio. Powered by Google Gemini.</p>
         <p className="text-xs mt-2 opacity-50">Content generated by AI should be verified for accuracy.</p>

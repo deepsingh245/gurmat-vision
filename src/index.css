@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-saffron-50: #fff8e1;
+  --color-saffron-100: #ffecb3;
+  --color-saffron-200: #ffe082;
+  --color-saffron-500: #ffc107;
+  --color-saffron-600: #ffb300;
+  --color-saffron-900: #ff6f00;
+  --color-navy-200: #c5cae9;
+  --color-navy-800: #1a237e;
+  --color-navy-900: #0d47a1;
+
+  --font-sans: 'Nunito', sans-serif;
+  --font-gurmukhi: 'Mukta Mahee', sans-serif;
+  --font-serif: Georgia, serif;
+}
+
+body {
+  background-color: #f8f9fa;
+}
