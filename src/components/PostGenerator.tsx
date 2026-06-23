@@ -3,6 +3,8 @@ import { HukumnamaData, GeneratedPost } from '@/types';
 import { SOCIAL_TEMPLATES, CREDIT_COSTS } from '@/constants';
 import { generateSocialPost, generateStatusImage } from '@/services/geminiService';
 import { useCredits } from '@/hooks/useCredits';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 interface PostGeneratorProps {
@@ -11,6 +13,7 @@ interface PostGeneratorProps {
 
 const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
   const { credits, canAfford, spend, refund } = useCredits();
+  const { user } = useAuth();
 
   const [selectedTemplate, setSelectedTemplate] = useState(SOCIAL_TEMPLATES[0].id);
   const [language, setLanguage]                 = useState('English');
@@ -58,6 +61,9 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       spent = true;
       const url = await generateStatusImage(generatedPost.imagePrompt, '1K', '1:1');
       setGeneratedImage(url);
+      if (user) {
+        saveGeneration(user.uid, 'poster', generatedPost.imagePrompt, url, CREDIT_COSTS.IMAGE).catch(() => {});
+      }
     } catch {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError('Failed to generate image. Please try again.');

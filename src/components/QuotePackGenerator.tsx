@@ -3,10 +3,13 @@ import { generateQuotePack, generateStatusImage, generateBackgroundVideo } from 
 import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 const QuotePackGenerator: React.FC = () => {
   const { credits, canAfford, spend, refund } = useCredits();
+  const { user } = useAuth();
 
   const [topic, setTopic]         = useState('');
   const [quotes, setQuotes]       = useState<GurbaniQuote[]>([]);
@@ -55,9 +58,11 @@ const QuotePackGenerator: React.FC = () => {
       if (type === 'image') {
         const url = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url } }));
+        if (user) saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
       } else {
         const url = await generateBackgroundVideo(quote.videoPrompt, '9:16');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], vid: url } }));
+        if (user) saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
       }
     } catch {
       if (spent) await refund(cost);

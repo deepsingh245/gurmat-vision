@@ -3,6 +3,8 @@ import { generateStatusImage } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 interface StatusGeneratorProps {
@@ -11,6 +13,7 @@ interface StatusGeneratorProps {
 
 const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
   const { credits, canAfford, spend, refund } = useCredits();
+  const { user } = useAuth();
 
   const [loading, setLoading]               = useState(false);
   const [imageUrl, setImageUrl]             = useState<string | null>(null);
@@ -34,6 +37,9 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
       const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
       const url = await generateStatusImage(promptToUse, size, '9:16');
       setImageUrl(url);
+      if (user) {
+        saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
+      }
     } catch {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError('Failed to generate image. Ensure you have a valid API key and try again.');

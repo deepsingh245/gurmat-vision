@@ -82,6 +82,36 @@ export interface Generation {
   deleted?: boolean;
 }
 
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+export type TemplateCategory = 'gurbani' | 'gurpurab' | 'khalsa' | 'reel' | 'inspiration';
+export type TemplateMediaType = 'image' | 'video' | 'quote';
+
+export interface TemplateVariable {
+  key: string;
+  label: string;
+  placeholder: string;
+  type: 'text' | 'select';
+  options?: string[];
+  required?: boolean;
+}
+
+export interface ContentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: TemplateCategory;
+  mediaType: TemplateMediaType;
+  creditCost: number;
+  promptTemplate: string;
+  variables?: TemplateVariable[];
+  aspectRatio?: '1:1' | '9:16' | '16:9';
+  tags: string[];
+  emoji: string;
+}
+
+// ─── Voice ────────────────────────────────────────────────────────────────────
+
 export interface VoiceIntentResult {
   transcript: string;
   intent: 'create_hukumnama_post' | 'create_quote_pack' | 'create_status_image' | 'create_video' | 'unknown';

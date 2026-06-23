@@ -3,6 +3,8 @@ import { generateBackgroundVideo, generateVideoFromImage } from '@/services/gemi
 import { HukumnamaData } from '@/types';
 import { DEFAULT_VIDEO_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useAuth } from '@/contexts/AuthContext';
+import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 interface VideoGeneratorProps {
@@ -11,6 +13,7 @@ interface VideoGeneratorProps {
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
   const { credits, canAfford, spend, refund } = useCredits();
+  const { user } = useAuth();
 
   const [loading, setLoading]             = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
@@ -36,9 +39,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
       if (mode === 'text-to-video') {
         const prompt = customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || 'Spiritual ambiance');
         url = await generateBackgroundVideo(prompt, '9:16');
+        if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       } else if (mode === 'image-to-video' && uploadedImage) {
         const prompt = customPrompt || 'Animate this peacefully';
         url = await generateVideoFromImage(uploadedImage, prompt, '9:16');
+        if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       }
       setVideoUrl(url);
     } catch {

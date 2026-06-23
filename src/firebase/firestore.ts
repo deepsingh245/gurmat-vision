@@ -10,8 +10,11 @@ import {
   orderBy,
   limit,
   getDocs,
+  startAfter,
   runTransaction,
   serverTimestamp,
+  type QueryDocumentSnapshot,
+  type DocumentData,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from './config';
@@ -108,17 +111,24 @@ export const saveGeneration = async (
 
 export const getUserGenerations = async (
   userId: string,
-  pageSize = 20,
-): Promise<Generation[]> => {
-  const q = query(
-    collection(db, 'generations'),
+  pageSize = 12,
+  cursor?: QueryDocumentSnapshot<DocumentData>,
+): Promise<{ items: Generation[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> => {
+  const baseConstraints = [
     where('userId', '==', userId),
     where('deleted', '==', false),
     orderBy('createdAt', 'desc'),
+  ];
+  const q = query(
+    collection(db, 'generations'),
+    ...baseConstraints,
+    ...(cursor ? [startAfter(cursor)] : []),
     limit(pageSize),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Generation));
+  const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as Generation));
+  const lastDoc = snap.docs.length === pageSize ? snap.docs[snap.docs.length - 1] : null;
+  return { items, lastDoc };
 };
 
 export const softDeleteGeneration = async (generationId: string): Promise<void> => {

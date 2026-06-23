@@ -1,3 +1,17 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+functions/lib
+
+# Environment — never commit real keys
+.env
+.env.*
+!.env.example
+*.local
+
 # Logs
 logs
 *.log
@@ -7,12 +21,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea

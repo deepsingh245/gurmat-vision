@@ -14,6 +14,7 @@ import StatusGenerator    from '@/components/StatusGenerator';
 import VideoGenerator     from '@/components/VideoGenerator';
 import PostGenerator      from '@/components/PostGenerator';
 import QuotePackGenerator from '@/components/QuotePackGenerator';
+import TemplatesBrowser   from '@/components/TemplatesBrowser';
 import VoiceCommand       from '@/components/VoiceCommand';
 import Tabs               from '@/components/Tabs';
 import Button             from '@/components/Button';
@@ -24,6 +25,7 @@ type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings';
 
 const STUDIO_TABS = [
   { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
+  { id: 'templates', label: 'Templates', icon: '✨' },
   { id: 'voice',     label: 'Voice',      icon: '🎙️' },
   { id: 'post',      label: 'Posts',      icon: '✍️' },
   { id: 'quotes',    label: 'Quotes',     icon: '🌿' },
@@ -70,7 +72,7 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
             {initials}
           </div>
         )}
-        <span className="text-white text-sm font-medium hidden sm:block max-w-[100px] truncate">
+        <span className="text-white text-sm font-medium hidden sm:block max-w-25 truncate">
           {userDoc?.name || 'Account'}
         </span>
         <span className="text-white/70 text-xs">▾</span>
@@ -140,6 +142,7 @@ const Studio: React.FC = () => {
             )}
           </div>
         )}
+        {activeTab === 'templates' && <TemplatesBrowser />}
         {activeTab === 'voice'   && <VoiceCommand />}
         {activeTab === 'post'    && <PostGenerator hukumnama={hukumnama} />}
         {activeTab === 'quotes'  && <QuotePackGenerator />}
