@@ -22,7 +22,7 @@ export class ContentRejectedError extends Error {
 
 export const checkContentPolicy = async (prompt: string): Promise<void> => {
   try {
-    const fn = call<{ prompt: string }, { safe: boolean; reason: string }>('moderateContent');
+    const fn = call<{ prompt: string }, { safe: boolean; reason: string }>('hukumnamaModerateContent');
     await fn({ prompt });
   } catch (e) {
     const fe = e as FunctionsError;
@@ -41,7 +41,7 @@ export const checkContentPolicy = async (prompt: string): Promise<void> => {
 
 export const fetchHukumnamaWithGemini = async (): Promise<HukumnamaData> => {
   try {
-    const fn = call<void, HukumnamaData>('getHukumnama');
+    const fn = call<void, HukumnamaData>('hukumnamaGetHukumnama');
     const result = await fn();
     const d = result.data;
     return {
@@ -70,7 +70,7 @@ export const generateStatusImage = async (
   size: '1K' | '2K' | '4K' = '1K',
   aspectRatio: string = '9:16'
 ): Promise<string> => {
-  const fn = call<object, { url: string }>('generateImage');
+  const fn = call<object, { url: string }>('hukumnamaGenerateImage');
   const result = await fn({ prompt, size, aspectRatio });
   return result.data.url;
 };
@@ -81,7 +81,7 @@ export const generateBackgroundVideo = async (
   prompt: string,
   aspectRatio: '16:9' | '9:16' = '9:16'
 ): Promise<string> => {
-  const fn = call<object, { url: string }>('generateVideo', 300_000);
+  const fn = call<object, { url: string }>('hukumnamaGenerateVideo', 300_000);
   const result = await fn({ prompt, aspectRatio });
   return result.data.url;
 };
@@ -97,7 +97,7 @@ export const generateVideoFromImage = async (
     reader.readAsDataURL(imageBlob);
   });
 
-  const fn = call<object, { url: string }>('generateVideoFromImage', 300_000);
+  const fn = call<object, { url: string }>('hukumnamaGenerateVideoFromImage', 300_000);
   const result = await fn({ imageBase64, imageMimeType: imageBlob.type, prompt, aspectRatio });
   return result.data.url;
 };
@@ -109,7 +109,7 @@ export const generateSocialPost = async (
   stylePrompt: string,
   language: string
 ): Promise<GeneratedPost> => {
-  const fn = call<object, GeneratedPost>('generatePost');
+  const fn = call<object, GeneratedPost>('hukumnamaGeneratePost');
   const result = await fn({ hukumnama, stylePrompt, language });
   return result.data;
 };
@@ -117,7 +117,7 @@ export const generateSocialPost = async (
 // ─── Quote pack ───────────────────────────────────────────────────────────────
 
 export const generateQuotePack = async (topic: string, count = 5): Promise<GurbaniQuote[]> => {
-  const fn = call<object, GurbaniQuote[]>('generateQuotePack');
+  const fn = call<object, GurbaniQuote[]>('hukumnamaGenerateQuotePack');
   const result = await fn({ topic, count });
   return result.data;
 };
@@ -131,7 +131,7 @@ export const processVoiceIntent = async (audioBlob: Blob): Promise<VoiceIntentRe
     reader.readAsDataURL(audioBlob);
   });
 
-  const fn = call<object, VoiceIntentResult>('processVoice');
+  const fn = call<object, VoiceIntentResult>('hukumnamaProcessVoice');
   const result = await fn({ audioBase64, mimeType: audioBlob.type });
   return result.data;
 };

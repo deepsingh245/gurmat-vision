@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'crypto';
 import { moderatePrompt } from './moderation';
-export { grantAdReward } from './ads';
+export { hukumnamaGrantAdReward } from './ads';
 
 admin.initializeApp();
 
@@ -19,16 +19,21 @@ const MODEL = {
   VIDEO:       'veo-3.1-fast-generate-preview',
 };
 
-const HUKUMNAMA_PROMPT = `
-Find the daily Hukumnama Sahib from Sri Darbar Sahib (Golden Temple) for today.
-Return ONLY a valid JSON object. Do not include markdown code blocks or any other text.
-The JSON must have the following keys:
-- "gurmukhi": The full Hukumnama in Gurmukhi script.
-- "punjabi": The Punjabi translation/Vyakhya.
-- "english": The English translation.
-- "summary": A short 2-sentence summary of the message.
-- "date": The date of the Hukumnama.
-`;
+const GURBANINOW_API = 'https://api.gurbaninow.com/v2/hukamnama/today';
+
+interface GurbaniNowLine {
+  gurmukhi: { unicode: string };
+  translation: { english: Record<string, string>; punjabi: Record<string, string> };
+}
+interface GurbaniNowResponse {
+  error: boolean;
+  date: { gregorian: { month: string; date: number; year: number } };
+  hukamnama: Array<{ line: GurbaniNowLine }>;
+}
+
+function firstValue(obj: Record<string, string>): string {
+  return Object.values(obj).find(v => typeof v === 'string' && v.trim()) ?? '';
+}
 
 const VOICE_SYS_INSTRUCTION = `
 You are an intelligent assistant for a Sikh Gurbani App.
@@ -48,24 +53,11 @@ Return a JSON object with:
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function requireAuth(request: { auth?: { uid: string } | null }): string {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', 'Must be signed in.');
-  }
-  return request.auth.uid;
-}
 
 function getAi(): GoogleGenAI {
   return new GoogleGenAI({ apiKey: geminiKey.value() });
 }
 
-function extractJson(text: string): string {
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) return fence[1].trim();
-  const obj = text.match(/\{[\s\S]*\}/);
-  if (obj) return obj[0];
-  return text.trim();
-}
 
 async function uploadToStorage(
   buffer: Buffer,
@@ -89,10 +81,10 @@ async function uploadToStorage(
 
 interface ModerateRequest { prompt: string }
 
-export const moderateContent = onCall(
+export const hukumnamaModerateContent = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    const uid = requireAuth(request);
+    const uid = request.auth?.uid ?? 'guest';
     const { prompt } = request.data as ModerateRequest;
     if (!prompt?.trim()) return { safe: true, reason: '' };
     // Throws permission-denied if rejected (client catches it)
@@ -103,17 +95,34 @@ export const moderateContent = onCall(
 
 // ─── getHukumnama — fixed system prompt, no user input, no moderation needed ──
 
-export const getHukumnama = onCall(
+export const hukumnamaGetHukumnama = onCall(
   { secrets: [geminiKey] },
-  async (request) => {
-    requireAuth(request);
-    const client = getAi();
-    const response = await client.models.generateContent({
-      model: MODEL.TEXT,
-      contents: HUKUMNAMA_PROMPT,
-      config: { tools: [{ googleSearch: {} }] },
-    });
-    return JSON.parse(extractJson(response.text ?? ''));
+  async (_request) => {
+    const res = await fetch(GURBANINOW_API);
+    if (!res.ok) throw new HttpsError('unavailable', 'Failed to fetch Hukamnama from source');
+
+    const data = await res.json() as GurbaniNowResponse;
+    if (data.error) throw new HttpsError('unavailable', 'Hukamnama source returned an error');
+
+    const gurmukhi = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
+    const punjabi  = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
+    const english  = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
+    const { month, date: day, year } = data.date.gregorian;
+
+    // Gemini used only for the 2-sentence summary — not for the canonical text
+    let summary = '';
+    try {
+      const client = getAi();
+      const summaryRes = await client.models.generateContent({
+        model: MODEL.TEXT,
+        contents: `Summarize the spiritual message of this Hukamnama in exactly 2 sentences. Keep it accessible and uplifting. Text: "${english}"`,
+      });
+      summary = summaryRes.text?.trim() ?? '';
+    } catch {
+      // Summary is non-critical — return the official text even if Gemini is unavailable
+    }
+
+    return { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
   }
 );
 
@@ -125,10 +134,10 @@ interface GenerateImageRequest {
   aspectRatio?: string;
 }
 
-export const generateImage = onCall(
+export const hukumnamaGenerateImage = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    const uid = requireAuth(request);
+    const uid = request.auth?.uid ?? 'guest';
     const { prompt, size = '1K', aspectRatio = '9:16' } = request.data as GenerateImageRequest;
 
     await moderatePrompt(prompt, uid, getAi());
@@ -166,10 +175,10 @@ interface GenerateVideoRequest {
   aspectRatio?: '16:9' | '9:16';
 }
 
-export const generateVideo = onCall(
+export const hukumnamaGenerateVideo = onCall(
   { secrets: [geminiKey], timeoutSeconds: 300, memory: '512MiB' },
   async (request) => {
-    const uid = requireAuth(request);
+    const uid = request.auth?.uid ?? 'guest';
     const { prompt, aspectRatio = '9:16' } = request.data as GenerateVideoRequest;
 
     await moderatePrompt(prompt, uid, getAi());
@@ -208,10 +217,10 @@ interface GenerateVideoFromImageRequest {
   aspectRatio?: '16:9' | '9:16';
 }
 
-export const generateVideoFromImage = onCall(
+export const hukumnamaGenerateVideoFromImage = onCall(
   { secrets: [geminiKey], timeoutSeconds: 300, memory: '512MiB' },
   async (request) => {
-    const uid = requireAuth(request);
+    const uid = request.auth?.uid ?? 'guest';
     const {
       imageBase64,
       imageMimeType,
@@ -255,10 +264,9 @@ interface GeneratePostRequest {
   language: string;
 }
 
-export const generatePost = onCall(
+export const hukumnamaGeneratePost = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    requireAuth(request);
     const { hukumnama, stylePrompt, language } = request.data as GeneratePostRequest;
     const client = getAi();
 
@@ -293,10 +301,10 @@ interface GenerateQuotePackRequest {
   count?: number;
 }
 
-export const generateQuotePack = onCall(
+export const hukumnamaGenerateQuotePack = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    const uid = requireAuth(request);
+    const uid = request.auth?.uid ?? 'guest';
     const { topic, count = 5 } = request.data as GenerateQuotePackRequest;
 
     await moderatePrompt(topic, uid, getAi());
@@ -329,10 +337,9 @@ interface ProcessVoiceRequest {
   mimeType: string;
 }
 
-export const processVoice = onCall(
+export const hukumnamaProcessVoice = onCall(
   { secrets: [geminiKey] },
   async (request) => {
-    requireAuth(request);
     const { audioBase64, mimeType } = request.data as ProcessVoiceRequest;
     const client = getAi();
 

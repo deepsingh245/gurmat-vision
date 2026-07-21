@@ -4,12 +4,14 @@ import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 const QuotePackGenerator: React.FC = () => {
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
+  const { addGuestGeneration } = useGuestSession();
 
   const [topic, setTopic]         = useState('');
   const [quotes, setQuotes]       = useState<GurbaniQuote[]>([]);
@@ -60,10 +62,12 @@ const QuotePackGenerator: React.FC = () => {
         const url = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url } }));
         if (user) saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
+        else addGuestGeneration({ type: 'quote-card', prompt: quote.imagePrompt, resultUrl: url, creditsUsed: cost });
       } else {
         const url = await generateBackgroundVideo(quote.videoPrompt, '9:16');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], vid: url } }));
         if (user) saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
+        else addGuestGeneration({ type: 'reel', prompt: quote.videoPrompt, resultUrl: url, creditsUsed: cost });
       }
       window.dispatchEvent(new Event('generation-complete'));
     } catch {

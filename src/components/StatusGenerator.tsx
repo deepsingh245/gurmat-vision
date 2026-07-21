@@ -4,6 +4,7 @@ import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
@@ -14,6 +15,7 @@ interface StatusGeneratorProps {
 const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
+  const { addGuestGeneration } = useGuestSession();
 
   const [loading, setLoading]               = useState(false);
   const [imageUrl, setImageUrl]             = useState<string | null>(null);
@@ -25,7 +27,9 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
   const handleGenerate = async () => {
     if (!hukumnama && !customPrompt) return;
     if (!canAfford(CREDIT_COSTS.IMAGE)) {
-      setError(`Not enough credits. You need ${CREDIT_COSTS.IMAGE} but have ${credits}.`);
+      setError(user
+        ? `Not enough credits. You need ${CREDIT_COSTS.IMAGE} but have ${credits}.`
+        : 'Not enough guest credits. Sign in to get more.');
       return;
     }
     setLoading(true);
@@ -40,6 +44,8 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
       setImageUrl(url);
       if (user) {
         saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
+      } else {
+        addGuestGeneration({ type: 'image', prompt: promptToUse, resultUrl: url, creditsUsed: CREDIT_COSTS.IMAGE });
       }
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {

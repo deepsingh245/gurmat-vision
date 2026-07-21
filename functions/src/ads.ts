@@ -7,7 +7,7 @@ const REWARD_CREDITS = 5;
 // grantAdReward — called by the client after a rewarded ad completes.
 // Rate-limited server-side: max MAX_DAILY_REWARDS per user per day.
 // Credits are updated atomically in a Firestore transaction.
-export const grantAdReward = onCall(async (request) => {
+export const hukumnamaGrantAdReward = onCall(async (request) => {
   if (!request.auth?.uid) {
     throw new HttpsError('unauthenticated', 'Must be signed in.');
   }

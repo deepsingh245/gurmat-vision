@@ -4,6 +4,7 @@ import type { ContentTemplate, TemplateCategory } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
 import { generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import Button from './Button';
@@ -32,6 +33,7 @@ const ALL_FILTERS: { id: CategoryFilter; label: string; emoji: string }[] = [
 const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => {
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
+  const { addGuestGeneration } = useGuestSession();
 
   const [expanded, setExpanded] = useState(false);
   const [vars, setVars] = useState<Record<string, string>>(() => {
@@ -70,9 +72,11 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
       if (isVideo) {
         url = await generateBackgroundVideo(prompt, '9:16');
         if (user) saveGeneration(user.uid, 'reel', prompt, url, cost).catch(() => {});
+        else addGuestGeneration({ type: 'reel', prompt, resultUrl: url, creditsUsed: cost });
       } else {
         url = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16');
         if (user) saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
+        else addGuestGeneration({ type: 'image', prompt, resultUrl: url, creditsUsed: cost });
       }
       setResult(url);
       window.dispatchEvent(new Event('generation-complete'));

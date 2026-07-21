@@ -37,7 +37,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
   const handleClaimReward = useCallback(async () => {
     setState('claiming');
     try {
-      const fn = httpsCallable<void, { creditsGranted: number }>(functions, 'grantAdReward');
+      const fn = httpsCallable<void, { creditsGranted: number }>(functions, 'hukumnamaGrantAdReward');
       const result = await fn();
       await refreshUserDoc();
       setState('done');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { GuestSessionProvider, useGuestSession } from '@/contexts/GuestSessionContext';
 import { fetchHukumnamaWithGemini } from '@/services/geminiService';
 import type { HukumnamaData } from '@/types';
 
@@ -26,7 +27,7 @@ const INTERSTITIAL_EVERY = 5;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy';
+type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy' | 'auth';
 
 const STUDIO_TABS = [
   { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
@@ -52,7 +53,6 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -105,12 +105,32 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
   );
 };
 
+// ─── Guest header (shown instead of UserMenu when not signed in) ──────────────
+
+const GuestHeader: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => (
+  <div className="flex items-center gap-2">
+    <button
+      onClick={() => onNavigate('creations')}
+      className="flex items-center justify-center w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+      title="My Creations"
+    >
+      <span className="text-sm">🖼️</span>
+    </button>
+    <button
+      onClick={() => onNavigate('auth')}
+      className="bg-saffron-500 hover:bg-saffron-600 text-navy-900 font-semibold text-xs px-4 py-1.5 rounded-full transition-colors"
+    >
+      Sign In
+    </button>
+  </div>
+);
+
 // ─── Main studio (content creation) ─────────────────────────────────────────
 
 const Studio: React.FC = () => {
-  const [activeTab, setActiveTab]   = useState('hukumnama');
-  const [hukumnama, setHukumnama]   = useState<HukumnamaData | null>(null);
-  const [loading, setLoading]       = useState(true);
+  const [activeTab, setActiveTab] = useState('hukumnama');
+  const [hukumnama, setHukumnama] = useState<HukumnamaData | null>(null);
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
     fetchHukumnamaWithGemini()
@@ -158,21 +178,28 @@ const Studio: React.FC = () => {
   );
 };
 
-// ─── Authenticated shell ──────────────────────────────────────────────────────
+// ─── App shell ────────────────────────────────────────────────────────────────
 
 const AppShell: React.FC = () => {
   const { user, userDoc, loading } = useAuth();
-  const [page, setPage]             = useState<Page>('studio');
-  const [showInterstitial, setShowInterstitial] = useState(false);
-  const genCountRef = useRef(0);
+  const { guestCredits }           = useGuestSession();
 
-  // Listen for generation-complete events dispatched by any generator
+  const [page, setPage]                         = useState<Page>('studio');
+  const [showInterstitial, setShowInterstitial] = useState(false);
+  const genCountRef                             = useRef(0);
+
+  // Handle auth state transitions
+  useEffect(() => {
+    if (user && page === 'auth') setPage('studio');
+    if (!user && (page === 'profile' || page === 'settings')) setPage('studio');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Interstitial counter
   useEffect(() => {
     const handler = () => {
       genCountRef.current += 1;
-      if (genCountRef.current % INTERSTITIAL_EVERY === 0) {
-        setShowInterstitial(true);
-      }
+      if (genCountRef.current % INTERSTITIAL_EVERY === 0) setShowInterstitial(true);
     };
     window.addEventListener('generation-complete', handler);
     return () => window.removeEventListener('generation-complete', handler);
@@ -186,9 +213,8 @@ const AppShell: React.FC = () => {
     );
   }
 
-  if (!user) return <AuthPage />;
-
   const goBack = () => setPage('studio');
+  const displayCredits = user ? (userDoc?.credits ?? 0) : guestCredits;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-20">
@@ -227,9 +253,13 @@ const AppShell: React.FC = () => {
               title="Credits"
             >
               <span className="text-saffron-300 text-xs">⭐</span>
-              <span className="text-white text-xs font-bold">{userDoc?.credits ?? 0}</span>
+              <span className="text-white text-xs font-bold">{displayCredits}</span>
             </button>
-            <UserMenu onNavigate={setPage} />
+            {user ? (
+              <UserMenu onNavigate={setPage} />
+            ) : (
+              <GuestHeader onNavigate={setPage} />
+            )}
           </div>
         </div>
       </header>
@@ -243,18 +273,19 @@ const AppShell: React.FC = () => {
             </div>
           </>
         )}
-        {page === 'profile'   && <ProfilePage        onBack={goBack} />}
-        {page === 'credits'   && <CreditsPage        onBack={goBack} />}
+        {page === 'auth'      && <AuthPage onBack={goBack} />}
+        {page === 'profile'   && <ProfilePage       onBack={goBack} />}
+        {page === 'credits'   && <CreditsPage        onBack={goBack} onSignIn={() => setPage('auth')} />}
         {page === 'creations' && (
           <>
             <CreationsPage onBack={goBack} />
-            <div className="mt-4 mb-8 max-w-5xl mx-auto px-4">
+            <div className="mt-4 mb-8">
               <BannerAd slot="creations-bottom" format="horizontal" />
             </div>
           </>
         )}
-        {page === 'settings'  && <SettingsPage       onBack={goBack} />}
-        {page === 'policy'    && <ContentPolicyPage  onBack={goBack} />}
+        {page === 'settings'  && <SettingsPage      onBack={goBack} />}
+        {page === 'policy'    && <ContentPolicyPage onBack={goBack} />}
       </main>
 
       <footer className="text-center text-gray-400 text-sm py-8">
@@ -275,7 +306,9 @@ const AppShell: React.FC = () => {
 
 const App: React.FC = () => (
   <AuthProvider>
-    <AppShell />
+    <GuestSessionProvider>
+      <AppShell />
+    </GuestSessionProvider>
   </AuthProvider>
 );
 

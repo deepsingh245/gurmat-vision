@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { getUserGenerations, softDeleteGeneration } from '@/firebase/firestore';
 import type { Generation, GenerationType } from '@/types';
 
@@ -59,7 +60,7 @@ async function downloadFile(url: string, filename: string) {
 
 interface CardProps {
   item: Generation;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
@@ -75,8 +76,7 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
     if (!item.id) return;
     setDeleting(true);
     try {
-      await softDeleteGeneration(item.id);
-      onDelete(item.id);
+      await onDelete(item.id);
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
@@ -104,7 +104,6 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
             loading="lazy"
           />
         )}
-        {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
           <button
             onClick={() => downloadFile(item.resultUrl, filename)}
@@ -126,7 +125,6 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
         </div>
         <p className="text-xs text-gray-500 line-clamp-2 flex-1">{item.prompt}</p>
 
-        {/* Actions */}
         {confirmDelete ? (
           <div className="flex gap-1.5">
             <button
@@ -169,17 +167,82 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
 
 const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
   const { user } = useAuth();
+  const { guestGenerations, removeGuestGeneration } = useGuestSession();
 
-  const [items, setItems]                   = useState<Generation[]>([]);
-  const [loading, setLoading]               = useState(true);
-  const [loadingMore, setLoadingMore]       = useState(false);
-  const [cursor, setCursor]                 = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore]               = useState(false);
-  const [filter, setFilter]                 = useState<FilterTab>('all');
-  const [error, setError]                   = useState<string | null>(null);
+  // Declare all state at top — used by both guest and auth branches
+  const [items, setItems]             = useState<Generation[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [cursor, setCursor]           = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore]         = useState(false);
+  const [filter, setFilter]           = useState<FilterTab>('all');
+  const [error, setError]             = useState<string | null>(null);
+
+  // ─── Guest branch ───────────────────────────────────────────────────────────
+  if (!user) {
+    const visible = guestGenerations.filter(i => !i.deleted && matchesFilter(i.type, filter));
+    const guestDelete = async (id: string) => { removeGuestGeneration(id); };
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
+          ← Back
+        </button>
+
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">My Creations</h2>
+          {guestGenerations.length > 0 && (
+            <span className="text-sm text-gray-400">
+              {guestGenerations.length} this session
+            </span>
+          )}
+        </div>
+
+        {guestGenerations.length > 0 && (
+          <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+            {FILTER_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === tab.id ? 'bg-white shadow text-navy-900' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {visible.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <p className="text-4xl mb-4">🌿</p>
+            <p className="font-semibold text-gray-700 mb-2">No creations yet this session</p>
+            <p className="text-sm text-gray-400 max-w-xs mx-auto mb-4">
+              Generated images, videos, and quote cards will appear here.
+              Sign in to save your creations permanently.
+            </p>
+            <button
+              onClick={onBack}
+              className="text-saffron-600 hover:text-saffron-700 text-sm font-semibold"
+            >
+              Go to Studio →
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {visible.map(item => (
+              <GenerationCard key={item.id} item={item} onDelete={guestDelete} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Auth branch (Firestore-backed) ─────────────────────────────────────────
 
   const fetchPage = useCallback(async (reset: boolean) => {
-    if (!user) return;
     reset ? setLoading(true) : setLoadingMore(true);
     setError(null);
     try {
@@ -196,14 +259,17 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
     } finally {
       reset ? setLoading(false) : setLoadingMore(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, cursor]);
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     fetchPage(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const handleDelete = (id: string) => {
+  const handleAuthDelete = async (id: string) => {
+    await softDeleteGeneration(id);
     setItems(prev => prev.filter(i => i.id !== id));
   };
 
@@ -222,7 +288,6 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         )}
       </div>
 
-      {/* Filter tabs */}
       {items.length > 0 && (
         <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
           {FILTER_TABS.map(tab => (
@@ -230,9 +295,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === tab.id
-                  ? 'bg-white shadow text-navy-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                filter === tab.id ? 'bg-white shadow text-navy-900' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               {tab.label}
@@ -275,7 +338,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {visible.map(item => (
-              <GenerationCard key={item.id} item={item} onDelete={handleDelete} />
+              <GenerationCard key={item.id} item={item} onDelete={handleAuthDelete} />
             ))}
           </div>
 
