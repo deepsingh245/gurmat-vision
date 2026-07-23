@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import * as admin from 'firebase-admin';
 import { GoogleGenAI } from '@google/genai';
@@ -33,6 +34,45 @@ interface GurbaniNowResponse {
 
 function firstValue(obj: Record<string, string>): string {
   return Object.values(obj).find(v => typeof v === 'string' && v.trim()) ?? '';
+}
+
+function todayKeyIST(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
+interface HukumnamaDoc {
+  gurmukhi: string;
+  punjabi: string;
+  english: string;
+  summary: string;
+  date: string;
+}
+
+async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
+  const res = await fetch(GURBANINOW_API);
+  if (!res.ok) throw new HttpsError('unavailable', 'Failed to fetch Hukamnama from source');
+
+  const data = await res.json() as GurbaniNowResponse;
+  if (data.error) throw new HttpsError('unavailable', 'Hukamnama source returned an error');
+
+  const gurmukhi = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
+  const punjabi  = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
+  const english  = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
+  const { month, date: day, year } = data.date.gregorian;
+
+  let summary = '';
+  try {
+    const client = getAi();
+    const summaryRes = await client.models.generateContent({
+      model: MODEL.TEXT,
+      contents: `Summarize the spiritual message of this Hukamnama in exactly 2 sentences. Keep it accessible and uplifting. Text: "${english}"`,
+    });
+    summary = summaryRes.text?.trim() ?? '';
+  } catch { /* non-critical — Hukamnama text still returned without summary */ }
+
+  const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
+  await admin.firestore().collection('hukamnama').doc(dateKey).set(doc);
+  return doc;
 }
 
 const VOICE_SYS_INSTRUCTION = `
@@ -93,36 +133,24 @@ export const hukumnamaModerateContent = onCall(
   }
 );
 
-// ─── getHukumnama — fixed system prompt, no user input, no moderation needed ──
+// ─── getHukumnama — reads from Firestore cache, falls back to live fetch ────────
 
 export const hukumnamaGetHukumnama = onCall(
   { secrets: [geminiKey] },
   async (_request) => {
-    const res = await fetch(GURBANINOW_API);
-    if (!res.ok) throw new HttpsError('unavailable', 'Failed to fetch Hukamnama from source');
+    const dateKey = todayKeyIST();
+    const cached = await admin.firestore().collection('hukamnama').doc(dateKey).get();
+    if (cached.exists) return cached.data() as HukumnamaDoc;
+    return fetchAndCacheHukamnama(dateKey);
+  }
+);
 
-    const data = await res.json() as GurbaniNowResponse;
-    if (data.error) throw new HttpsError('unavailable', 'Hukamnama source returned an error');
+// ─── scheduledFetch — runs 6:05 AM IST daily, populates Firestore cache ────────
 
-    const gurmukhi = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
-    const punjabi  = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
-    const english  = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
-    const { month, date: day, year } = data.date.gregorian;
-
-    // Gemini used only for the 2-sentence summary — not for the canonical text
-    let summary = '';
-    try {
-      const client = getAi();
-      const summaryRes = await client.models.generateContent({
-        model: MODEL.TEXT,
-        contents: `Summarize the spiritual message of this Hukamnama in exactly 2 sentences. Keep it accessible and uplifting. Text: "${english}"`,
-      });
-      summary = summaryRes.text?.trim() ?? '';
-    } catch {
-      // Summary is non-critical — return the official text even if Gemini is unavailable
-    }
-
-    return { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
+export const hukumnamaScheduledFetch = onSchedule(
+  { schedule: '5 6 * * *', timeZone: 'Asia/Kolkata', secrets: [geminiKey] },
+  async () => {
+    await fetchAndCacheHukamnama(todayKeyIST());
   }
 );
 

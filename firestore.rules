@@ -31,6 +31,13 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Daily Hukamnama cache — written by scheduled Cloud Function (Admin SDK).
+    // Public read so guests can also load the day's Hukamnama without auth.
+    match /hukamnama/{dateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Refusals: written exclusively by Cloud Functions (Admin SDK bypasses rules).
     // No client access — reviewed via admin tooling only.
     match /refusals/{refusalId} {
