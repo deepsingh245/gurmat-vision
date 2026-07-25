@@ -5,6 +5,16 @@ import * as admin from 'firebase-admin';
 import { GoogleGenAI } from '@google/genai';
 import { randomUUID } from 'crypto';
 import { moderatePrompt } from './moderation';
+import {
+  validatePrompt,
+  validateImagePayload,
+  rateLimit,
+  checkDailyCap,
+  spendCredits,
+  refundCredits,
+  logSpend,
+  CREDIT_COSTS,
+} from './guards';
 export { hukumnamaGrantAdReward } from './ads';
 
 admin.initializeApp();
@@ -71,7 +81,6 @@ async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
   } catch { /* non-critical — Hukamnama text still returned without summary */ }
 
   const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
-  // Cache write is best-effort — if it fails the user still gets the data this request
   try {
     await admin.firestore().collection('hukamnama').doc(dateKey).set(doc);
   } catch { /* non-critical */ }
@@ -94,13 +103,11 @@ Return a JSON object with:
 - suggestedPrompt: A highly optimized prompt string to execute the request.
 `;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getAi(): GoogleGenAI {
   return new GoogleGenAI({ apiKey: geminiKey.value() });
 }
-
 
 async function uploadToStorage(
   buffer: Buffer,
@@ -130,13 +137,13 @@ export const hukumnamaModerateContent = onCall(
     const uid = request.auth?.uid ?? 'guest';
     const { prompt } = request.data as ModerateRequest;
     if (!prompt?.trim()) return { safe: true, reason: '' };
-    // Throws permission-denied if rejected (client catches it)
+    await rateLimit(uid, 'moderateContent');
     await moderatePrompt(prompt, uid, getAi());
     return { safe: true, reason: '' };
   }
 );
 
-// ─── getHukumnama — reads from Firestore cache, falls back to live fetch ────────
+// ─── getHukumnama — reads from Firestore cache, falls back to live fetch ──────
 
 export const hukumnamaGetHukumnama = onCall(
   { secrets: [geminiKey] },
@@ -148,7 +155,7 @@ export const hukumnamaGetHukumnama = onCall(
   }
 );
 
-// ─── scheduledFetch — runs 6:05 AM IST daily, populates Firestore cache ────────
+// ─── scheduledFetch — runs 6:05 AM IST daily, populates Firestore cache ───────
 
 export const hukumnamaScheduledFetch = onSchedule(
   { schedule: '5 6 * * *', timeZone: 'Asia/Kolkata', secrets: [geminiKey] },
@@ -171,31 +178,42 @@ export const hukumnamaGenerateImage = onCall(
     const uid = request.auth?.uid ?? 'guest';
     const { prompt, size = '1K', aspectRatio = '9:16' } = request.data as GenerateImageRequest;
 
+    validatePrompt(prompt);
+    await rateLimit(uid, 'generateImage');
+    if (uid !== 'guest') await checkDailyCap(uid, 'generateImage');
     await moderatePrompt(prompt, uid, getAi());
+    if (uid !== 'guest') await spendCredits(uid, CREDIT_COSTS.IMAGE);
 
-    const client = getAi();
-    const isHighRes = size === '2K' || size === '4K';
-    const model = isHighRes ? MODEL.IMAGE_PRO : MODEL.IMAGE_FLASH;
-    const imageConfig: { aspectRatio: string; imageSize?: string } = { aspectRatio };
-    if (isHighRes) imageConfig.imageSize = size;
+    const spent = uid !== 'guest';
+    try {
+      const client = getAi();
+      const isHighRes = size === '2K' || size === '4K';
+      const model = isHighRes ? MODEL.IMAGE_PRO : MODEL.IMAGE_FLASH;
+      const imageConfig: { aspectRatio: string; imageSize?: string } = { aspectRatio };
+      if (isHighRes) imageConfig.imageSize = size;
 
-    const response = await client.models.generateContent({
-      model,
-      contents: { parts: [{ text: prompt }] },
-      config: { imageConfig },
-    });
+      const response = await client.models.generateContent({
+        model,
+        contents: { parts: [{ text: prompt }] },
+        config: { imageConfig },
+      });
 
-    for (const part of response.candidates?.[0]?.content?.parts ?? []) {
-      if (part.inlineData?.data) {
-        const buffer = Buffer.from(part.inlineData.data, 'base64');
-        const mimeType = part.inlineData.mimeType ?? 'image/png';
-        const ext = mimeType.split('/')[1] ?? 'png';
-        const filePath = `generated-images/${uid}/${Date.now()}.${ext}`;
-        const url = await uploadToStorage(buffer, filePath, mimeType);
-        return { url };
+      for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+          const buffer = Buffer.from(part.inlineData.data, 'base64');
+          const mimeType = part.inlineData.mimeType ?? 'image/png';
+          const ext = mimeType.split('/')[1] ?? 'png';
+          const filePath = `generated-images/${uid}/${Date.now()}.${ext}`;
+          const url = await uploadToStorage(buffer, filePath, mimeType);
+          await logSpend(uid, 'generateImage', CREDIT_COSTS.IMAGE);
+          return { url };
+        }
       }
+      throw new HttpsError('internal', 'No image data returned by Imagen');
+    } catch (e) {
+      if (spent) await refundCredits(uid, CREDIT_COSTS.IMAGE);
+      throw e;
     }
-    throw new HttpsError('internal', 'No image data returned by Imagen');
   }
 );
 
@@ -209,33 +227,46 @@ interface GenerateVideoRequest {
 export const hukumnamaGenerateVideo = onCall(
   { secrets: [geminiKey], timeoutSeconds: 300, memory: '512MiB' },
   async (request) => {
-    const uid = request.auth?.uid ?? 'guest';
+    if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to generate videos.');
+    const uid = request.auth.uid;
     const { prompt, aspectRatio = '9:16' } = request.data as GenerateVideoRequest;
 
+    validatePrompt(prompt);
+    await rateLimit(uid, 'generateVideo');
+    await checkDailyCap(uid, 'generateVideo');
     await moderatePrompt(prompt, uid, getAi());
+    await spendCredits(uid, CREDIT_COSTS.VIDEO);
 
-    const client = getAi();
-    let operation = await client.models.generateVideos({
-      model: MODEL.VIDEO,
-      prompt,
-      config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
-    });
+    let spent = true;
+    try {
+      const client = getAi();
+      let operation = await client.models.generateVideos({
+        model: MODEL.VIDEO,
+        prompt,
+        config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
+      });
 
-    while (!operation.done) {
-      await new Promise(r => setTimeout(r, 5000));
-      operation = await client.operations.getVideosOperation({ operation });
+      while (!operation.done) {
+        await new Promise(r => setTimeout(r, 5000));
+        operation = await client.operations.getVideosOperation({ operation });
+      }
+
+      const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
+      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
+
+      const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
+      if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const filePath = `generated-videos/${uid}/${Date.now()}.mp4`;
+      const url = await uploadToStorage(buffer, filePath, 'video/mp4');
+      spent = false;
+      await logSpend(uid, 'generateVideo', CREDIT_COSTS.VIDEO);
+      return { url };
+    } catch (e) {
+      if (spent) await refundCredits(uid, CREDIT_COSTS.VIDEO);
+      throw e;
     }
-
-    const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
-
-    const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
-    if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);
-
-    const buffer = Buffer.from(await res.arrayBuffer());
-    const filePath = `generated-videos/${uid}/${Date.now()}.mp4`;
-    const url = await uploadToStorage(buffer, filePath, 'video/mp4');
-    return { url };
   }
 );
 
@@ -251,7 +282,8 @@ interface GenerateVideoFromImageRequest {
 export const hukumnamaGenerateVideoFromImage = onCall(
   { secrets: [geminiKey], timeoutSeconds: 300, memory: '512MiB' },
   async (request) => {
-    const uid = request.auth?.uid ?? 'guest';
+    if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to generate videos.');
+    const uid = request.auth.uid;
     const {
       imageBase64,
       imageMimeType,
@@ -259,31 +291,44 @@ export const hukumnamaGenerateVideoFromImage = onCall(
       aspectRatio = '9:16',
     } = request.data as GenerateVideoFromImageRequest;
 
+    validateImagePayload(imageBase64);
+    validatePrompt(prompt);
+    await rateLimit(uid, 'generateVideoFromImage');
+    await checkDailyCap(uid, 'generateVideoFromImage');
     await moderatePrompt(prompt, uid, getAi());
+    await spendCredits(uid, CREDIT_COSTS.VIDEO);
 
-    const client = getAi();
-    let operation = await client.models.generateVideos({
-      model: MODEL.VIDEO,
-      prompt: prompt || 'Animate this scene naturally',
-      image: { imageBytes: imageBase64, mimeType: imageMimeType },
-      config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
-    });
+    let spent = true;
+    try {
+      const client = getAi();
+      let operation = await client.models.generateVideos({
+        model: MODEL.VIDEO,
+        prompt: prompt || 'Animate this scene naturally',
+        image: { imageBytes: imageBase64, mimeType: imageMimeType },
+        config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
+      });
 
-    while (!operation.done) {
-      await new Promise(r => setTimeout(r, 5000));
-      operation = await client.operations.getVideosOperation({ operation });
+      while (!operation.done) {
+        await new Promise(r => setTimeout(r, 5000));
+        operation = await client.operations.getVideosOperation({ operation });
+      }
+
+      const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
+      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
+
+      const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
+      if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const filePath = `generated-videos/${uid}/${Date.now()}.mp4`;
+      const url = await uploadToStorage(buffer, filePath, 'video/mp4');
+      spent = false;
+      await logSpend(uid, 'generateVideoFromImage', CREDIT_COSTS.VIDEO);
+      return { url };
+    } catch (e) {
+      if (spent) await refundCredits(uid, CREDIT_COSTS.VIDEO);
+      throw e;
     }
-
-    const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
-
-    const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
-    if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);
-
-    const buffer = Buffer.from(await res.arrayBuffer());
-    const filePath = `generated-videos/${uid}/${Date.now()}.mp4`;
-    const url = await uploadToStorage(buffer, filePath, 'video/mp4');
-    return { url };
   }
 );
 
@@ -298,11 +343,20 @@ interface GeneratePostRequest {
 export const hukumnamaGeneratePost = onCall(
   { secrets: [geminiKey] },
   async (request) => {
+    const uid = request.auth?.uid ?? 'guest';
     const { hukumnama, stylePrompt, language } = request.data as GeneratePostRequest;
-    const client = getAi();
 
-    const prompt = `
-Based on today's Hukumnama Summary: "${hukumnama.summary}" and Text: "${hukumnama.english}",
+    validatePrompt(stylePrompt, 500);
+    await rateLimit(uid, 'generatePost');
+    if (uid !== 'guest') await checkDailyCap(uid, 'generatePost');
+    await moderatePrompt(stylePrompt, uid, getAi());
+    if (uid !== 'guest') await spendCredits(uid, CREDIT_COSTS.IMAGE);
+
+    const spent = uid !== 'guest';
+    try {
+      const client = getAi();
+      const prompt = `
+Based on today's Hukamnama Summary: "${hukumnama.summary}" and Text: "${hukumnama.english}",
 create a social media post.
 Style: ${stylePrompt}
 Language: ${language} (Write the body in this language, but keep Hashtags bilingual).
@@ -315,13 +369,17 @@ Return JSON:
   "imagePrompt": "A detailed prompt for an AI image generator (no text in image)"
 }
 `;
-
-    const response = await client.models.generateContent({
-      model: MODEL.TEXT,
-      contents: prompt,
-      config: { responseMimeType: 'application/json' },
-    });
-    return JSON.parse(response.text ?? '{}');
+      const response = await client.models.generateContent({
+        model: MODEL.TEXT,
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+      await logSpend(uid, 'generatePost', CREDIT_COSTS.IMAGE);
+      return JSON.parse(response.text ?? '{}');
+    } catch (e) {
+      if (spent) await refundCredits(uid, CREDIT_COSTS.IMAGE);
+      throw e;
+    }
   }
 );
 
@@ -338,10 +396,16 @@ export const hukumnamaGenerateQuotePack = onCall(
     const uid = request.auth?.uid ?? 'guest';
     const { topic, count = 5 } = request.data as GenerateQuotePackRequest;
 
+    validatePrompt(topic);
+    await rateLimit(uid, 'generateQuotePack');
+    if (uid !== 'guest') await checkDailyCap(uid, 'generateQuotePack');
     await moderatePrompt(topic, uid, getAi());
+    if (uid !== 'guest') await spendCredits(uid, CREDIT_COSTS.QUOTE_PACK);
 
-    const client = getAi();
-    const prompt = `
+    const spent = uid !== 'guest';
+    try {
+      const client = getAi();
+      const prompt = `
 Generate ${count} distinct Gurbani quotes related to the topic: "${topic}".
 Return a JSON array where each object has:
 - "gurmukhi": Original Gurbani line.
@@ -351,17 +415,21 @@ Return a JSON array where each object has:
 - "imagePrompt": A prompt for an AI image generator background (abstract, spiritual, no text).
 - "videoPrompt": A prompt for an AI video generator (peaceful, cinematic).
 `;
-
-    const response = await client.models.generateContent({
-      model: MODEL.TEXT,
-      contents: prompt,
-      config: { responseMimeType: 'application/json' },
-    });
-    return JSON.parse(response.text ?? '[]');
+      const response = await client.models.generateContent({
+        model: MODEL.TEXT,
+        contents: prompt,
+        config: { responseMimeType: 'application/json' },
+      });
+      await logSpend(uid, 'generateQuotePack', CREDIT_COSTS.QUOTE_PACK);
+      return JSON.parse(response.text ?? '[]');
+    } catch (e) {
+      if (spent) await refundCredits(uid, CREDIT_COSTS.QUOTE_PACK);
+      throw e;
+    }
   }
 );
 
-// ─── processVoice — intent parsing only, no content generation ───────────────
+// ─── processVoice — intent parsing only, no content generation ────────────────
 
 interface ProcessVoiceRequest {
   audioBase64: string;
@@ -371,9 +439,13 @@ interface ProcessVoiceRequest {
 export const hukumnamaProcessVoice = onCall(
   { secrets: [geminiKey] },
   async (request) => {
+    const uid = request.auth?.uid ?? 'guest';
     const { audioBase64, mimeType } = request.data as ProcessVoiceRequest;
-    const client = getAi();
 
+    validateImagePayload(audioBase64);
+    await rateLimit(uid, 'processVoice');
+
+    const client = getAi();
     const response = await client.models.generateContent({
       model: MODEL.TEXT,
       contents: {

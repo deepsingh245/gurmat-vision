@@ -43,5 +43,20 @@ service cloud.firestore {
     match /refusals/{refusalId} {
       allow read, write: if false;
     }
+
+    // Rate limit counters — written by Cloud Functions only.
+    match /rateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    // Daily generation caps — written by Cloud Functions only.
+    match /dailyCaps/{docId} {
+      allow read, write: if false;
+    }
+
+    // Spend audit log — written by Cloud Functions only.
+    match /spendLog/{docId} {
+      allow read, write: if false;
+    }
   }
 }
