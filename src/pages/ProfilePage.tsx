@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateUserDocument } from '@/firebase/firestore';
 import type { UserLanguage } from '@/types';
@@ -9,6 +10,7 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
+  const { t } = useTranslation();
   const { user, userDoc, refreshUserDoc } = useAuth();
 
   const [name, setName]         = useState(userDoc?.name || '');
@@ -28,7 +30,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      setError('Failed to save changes. Please try again.');
+      setError(t('profile.error'));
     } finally {
       setSaving(false);
     }
@@ -44,12 +46,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
-        ← Back
+        {t('nav.back')}
       </button>
 
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Your Profile</h2>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">{t('profile.title')}</h2>
 
-      {/* Avatar */}
       <div className="flex items-center gap-4 mb-8">
         {userDoc?.photoUrl ? (
           <img src={userDoc.photoUrl} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
@@ -71,18 +72,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.displayName')}</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t('profile.namePlaceholder')}
             className="w-full p-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-saffron-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
           <input
             type="email"
             value={user?.email || ''}
@@ -92,27 +93,30 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Language</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{t('profile.preferredLanguage')}</label>
           <div className="flex gap-2">
-            {(['english', 'punjabi'] as UserLanguage[]).map(lang => (
+            {[
+              { id: 'english' as UserLanguage, label: t('profile.langEnglish') },
+              { id: 'punjabi' as UserLanguage, label: t('profile.langPunjabi') },
+            ].map(({ id, label }) => (
               <button
-                key={lang}
+                key={id}
                 type="button"
-                onClick={() => setLanguage(lang)}
+                onClick={() => setLanguage(id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border capitalize transition-colors ${
-                  language === lang
+                  language === id
                     ? 'bg-saffron-50 border-saffron-500 text-saffron-900'
                     : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {lang === 'punjabi' ? 'ਪੰਜਾਬੀ' : 'English'}
+                {label}
               </button>
             ))}
           </div>
         </div>
 
         <Button type="submit" isLoading={saving} className="w-full">
-          {saved ? '✓ Saved' : 'Save Changes'}
+          {saved ? t('profile.saved') : t('profile.save')}
         </Button>
       </form>
     </div>

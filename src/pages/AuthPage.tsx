@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { signInWithGoogle, signInWithEmail, registerWithEmail } from '@/firebase/auth';
 import Button from '@/components/Button';
 
@@ -9,6 +10,7 @@ interface AuthPageProps {
 }
 
 const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
+  const { t } = useTranslation();
   const [mode, setMode]         = useState<Mode>('signin');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     try {
       await signInWithGoogle();
     } catch {
-      setError('Google sign-in failed. Please try again.');
+      setError(t('auth.errorGoogle'));
     } finally {
       setLoading(false);
     }
@@ -41,13 +43,13 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('user-not-found') || msg.includes('wrong-password') || msg.includes('invalid-credential')) {
-        setError('Invalid email or password.');
+        setError(t('auth.errorCredentials'));
       } else if (msg.includes('email-already-in-use')) {
-        setError('An account with this email already exists.');
+        setError(t('auth.errorEmailExists'));
       } else if (msg.includes('weak-password')) {
-        setError('Password must be at least 6 characters.');
+        setError(t('auth.errorWeakPassword'));
       } else {
-        setError('Something went wrong. Please try again.');
+        setError(t('auth.errorGeneric'));
       }
     } finally {
       setLoading(false);
@@ -61,8 +63,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
         <div className="w-20 h-20 bg-saffron-500 rounded-full flex items-center justify-center text-navy-900 font-bold text-4xl shadow-lg mx-auto mb-4">
           ੴ
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Hukumnama AI Studio</h1>
-        <p className="text-gray-500 mt-1 text-sm">AI-powered Sikh content creation</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('auth.title')}</h1>
+        <p className="text-gray-500 mt-1 text-sm">{t('auth.subtitle')}</p>
       </div>
 
       {onBack && (
@@ -71,14 +73,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             onClick={onBack}
             className="text-sm text-gray-400 hover:text-gray-600 underline underline-offset-2"
           >
-            Continue without signing in →
+            {t('auth.continueGuest')}
           </button>
         </div>
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         <h2 className="text-lg font-bold text-gray-800 mb-6">
-          {mode === 'signin' ? 'Sign in to continue' : 'Create your account'}
+          {mode === 'signin' ? t('auth.signInHeading') : t('auth.createAccountHeading')}
         </h2>
 
         {error && (
@@ -99,12 +101,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Continue with Google
+          {t('auth.continueWithGoogle')}
         </button>
 
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">or</span>
+          <span className="text-xs text-gray-400">{t('auth.or')}</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
@@ -113,7 +115,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           {mode === 'register' && (
             <input
               type="text"
-              placeholder="Full name"
+              placeholder={t('auth.namePlaceholder')}
               value={name}
               onChange={e => setName(e.target.value)}
               required
@@ -122,7 +124,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           )}
           <input
             type="email"
-            placeholder="Email address"
+            placeholder={t('auth.emailPlaceholder')}
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
@@ -130,7 +132,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t('auth.passwordPlaceholder')}
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
@@ -138,24 +140,24 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack }) => {
             className="w-full p-3 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-saffron-500"
           />
           <Button type="submit" isLoading={loading} className="w-full">
-            {mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {mode === 'signin' ? t('auth.signIn') : t('auth.createAccount')}
           </Button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-4">
-          {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+          {mode === 'signin' ? t('auth.noAccount') + ' ' : t('auth.haveAccount') + ' '}
           <button
             onClick={() => { setMode(mode === 'signin' ? 'register' : 'signin'); setError(null); }}
             className="text-saffron-600 font-semibold hover:underline"
           >
-            {mode === 'signin' ? 'Sign up' : 'Sign in'}
+            {mode === 'signin' ? t('auth.signUp') : t('auth.signInLink')}
           </button>
         </p>
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-6">
-        By continuing you agree to our content policy.<br />
-        AI-generated content should be verified for accuracy.
+        {t('auth.policyNote')}<br />
+        {t('auth.aiDisclaimer')}
       </p>
     </div>
   );

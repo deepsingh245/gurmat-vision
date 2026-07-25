@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { GuestSessionProvider, useGuestSession } from '@/contexts/GuestSessionContext';
 import { fetchHukumnamaWithGemini } from '@/services/geminiService';
@@ -22,6 +23,7 @@ import Tabs               from '@/components/Tabs';
 import Button             from '@/components/Button';
 import BannerAd           from '@/components/BannerAd';
 import InterstitialModal  from '@/components/InterstitialModal';
+import LanguageSwitcher   from '@/components/LanguageSwitcher';
 
 const INTERSTITIAL_EVERY = 5;
 
@@ -29,27 +31,11 @@ const INTERSTITIAL_EVERY = 5;
 
 type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy' | 'auth';
 
-const STUDIO_TABS = [
-  { id: 'hukumnama', label: 'Hukumnama', icon: '📜' },
-  { id: 'templates', label: 'Templates', icon: '✨' },
-  { id: 'voice',     label: 'Voice',      icon: '🎙️' },
-  { id: 'post',      label: 'Posts',      icon: '✍️' },
-  { id: 'quotes',    label: 'Quotes',     icon: '🌿' },
-  { id: 'status',    label: 'Status',     icon: '🖼️' },
-  { id: 'video',     label: 'Video',      icon: '🎥' },
-];
-
-const USER_MENU_ITEMS: { page: Page; label: string; icon: string }[] = [
-  { page: 'profile',   label: 'Profile',       icon: '👤' },
-  { page: 'credits',   label: 'Credits',        icon: '⭐' },
-  { page: 'creations', label: 'My Creations',   icon: '🖼️' },
-  { page: 'settings',  label: 'Settings',       icon: '⚙️' },
-];
-
 // ─── User avatar button + dropdown ───────────────────────────────────────────
 
 const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const { userDoc } = useAuth();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -60,6 +46,13 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const USER_MENU_ITEMS: { page: Page; label: string; icon: string }[] = [
+    { page: 'profile',   label: t('menu.profile'),    icon: '👤' },
+    { page: 'credits',   label: t('menu.credits'),    icon: '⭐' },
+    { page: 'creations', label: t('menu.myCreations'), icon: '🖼️' },
+    { page: 'settings',  label: t('menu.settings'),   icon: '⚙️' },
+  ];
 
   const initials = (userDoc?.name || '?')
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -78,7 +71,7 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
           </div>
         )}
         <span className="text-white text-sm font-medium hidden sm:block max-w-25 truncate">
-          {userDoc?.name || 'Account'}
+          {userDoc?.name || t('menu.profile')}
         </span>
         <span className="text-white/70 text-xs">▾</span>
       </button>
@@ -107,30 +100,44 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
 
 // ─── Guest header (shown instead of UserMenu when not signed in) ──────────────
 
-const GuestHeader: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => (
-  <div className="flex items-center gap-2">
-    <button
-      onClick={() => onNavigate('creations')}
-      className="flex items-center justify-center w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-      title="My Creations"
-    >
-      <span className="text-sm">🖼️</span>
-    </button>
-    <button
-      onClick={() => onNavigate('auth')}
-      className="bg-saffron-500 hover:bg-saffron-600 text-navy-900 font-semibold text-xs px-4 py-1.5 rounded-full transition-colors"
-    >
-      Sign In
-    </button>
-  </div>
-);
+const GuestHeader: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onNavigate('creations')}
+        className="flex items-center justify-center w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+        title={t('menu.myCreations')}
+      >
+        <span className="text-sm">🖼️</span>
+      </button>
+      <button
+        onClick={() => onNavigate('auth')}
+        className="bg-saffron-500 hover:bg-saffron-600 text-navy-900 font-semibold text-xs px-4 py-1.5 rounded-full transition-colors"
+      >
+        {t('nav.signIn')}
+      </button>
+    </div>
+  );
+};
 
 // ─── Main studio (content creation) ─────────────────────────────────────────
 
 const Studio: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('hukumnama');
   const [hukumnama, setHukumnama] = useState<HukumnamaData | null>(null);
   const [loading, setLoading]     = useState(true);
+
+  const STUDIO_TABS = [
+    { id: 'hukumnama', label: t('tabs.hukumnama'), icon: '📜' },
+    { id: 'templates', label: t('tabs.templates'), icon: '✨' },
+    { id: 'voice',     label: t('tabs.voice'),     icon: '🎙️' },
+    { id: 'post',      label: t('tabs.posts'),     icon: '✍️' },
+    { id: 'quotes',    label: t('tabs.quotes'),    icon: '🌿' },
+    { id: 'status',    label: t('tabs.status'),    icon: '🖼️' },
+    { id: 'video',     label: t('tabs.video'),     icon: '🎥' },
+  ];
 
   useEffect(() => {
     fetchHukumnamaWithGemini()
@@ -152,16 +159,16 @@ const Studio: React.FC = () => {
             {!loading && (
               <div className="mt-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('post')}>
-                  <h3 className="font-bold text-blue-900 mb-1">📝 Write Post</h3>
-                  <p className="text-xs text-blue-700">Generate captions & hashtags</p>
+                  <h3 className="font-bold text-blue-900 mb-1">📝 {t('quickActions.writePost')}</h3>
+                  <p className="text-xs text-blue-700">{t('quickActions.writePostDesc')}</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('video')}>
-                  <h3 className="font-bold text-purple-900 mb-1">🎥 Create Video</h3>
-                  <p className="text-xs text-purple-700">Make Reels with Veo</p>
+                  <h3 className="font-bold text-purple-900 mb-1">🎥 {t('quickActions.createVideo')}</h3>
+                  <p className="text-xs text-purple-700">{t('quickActions.createVideoDesc')}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('quotes')}>
-                  <h3 className="font-bold text-green-900 mb-1">🌿 Get Quotes</h3>
-                  <p className="text-xs text-green-700">Generate themed quote packs</p>
+                  <h3 className="font-bold text-green-900 mb-1">🌿 {t('quickActions.getQuotes')}</h3>
+                  <p className="text-xs text-green-700">{t('quickActions.getQuotesDesc')}</p>
                 </div>
               </div>
             )}
@@ -183,6 +190,7 @@ const Studio: React.FC = () => {
 const AppShell: React.FC = () => {
   const { user, userDoc, loading } = useAuth();
   const { guestCredits }           = useGuestSession();
+  const { t } = useTranslation();
 
   const [page, setPage]                         = useState<Page>('studio');
   const [showInterstitial, setShowInterstitial] = useState(false);
@@ -232,8 +240,8 @@ const AppShell: React.FC = () => {
               ੴ
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-base font-bold leading-tight">Hukumnama Studio</h1>
-              <p className="text-xs text-saffron-200">AI Powered • Gemini 2.5</p>
+              <h1 className="text-base font-bold leading-tight">{t('nav.title')}</h1>
+              <p className="text-xs text-saffron-200">{t('nav.subtitle')}</p>
             </div>
           </button>
 
@@ -244,17 +252,18 @@ const AppShell: React.FC = () => {
                 className="hidden sm:flex text-xs py-1 px-3"
                 onClick={() => window.location.reload()}
               >
-                Refresh
+                {t('nav.refresh')}
               </Button>
             )}
             <button
               onClick={() => setPage('credits')}
               className="flex items-center gap-1 bg-saffron-500/20 hover:bg-saffron-500/30 rounded-full px-3 py-1 transition-colors"
-              title="Credits"
+              title={t('menu.credits')}
             >
               <span className="text-saffron-300 text-xs">⭐</span>
               <span className="text-white text-xs font-bold">{displayCredits}</span>
             </button>
+            <LanguageSwitcher />
             {user ? (
               <UserMenu onNavigate={setPage} />
             ) : (
@@ -289,13 +298,13 @@ const AppShell: React.FC = () => {
       </main>
 
       <footer className="text-center text-gray-400 text-sm py-8">
-        <p>© {new Date().getFullYear()} Hukumnama AI Studio. Powered by Google Gemini.</p>
-        <p className="text-xs mt-1 opacity-50">AI-generated content should be verified for accuracy.</p>
+        <p>{t('footer.copyright', { year: new Date().getFullYear() })}</p>
+        <p className="text-xs mt-1 opacity-50">{t('footer.disclaimer')}</p>
         <button
           onClick={() => setPage('policy')}
           className="text-xs mt-2 text-saffron-500 hover:text-saffron-600 underline underline-offset-2"
         >
-          Content Policy
+          {t('footer.contentPolicy')}
         </button>
       </footer>
     </div>

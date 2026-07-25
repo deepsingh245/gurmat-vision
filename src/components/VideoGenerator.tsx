@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateBackgroundVideo, generateVideoFromImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_VIDEO_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
@@ -13,6 +14,7 @@ interface VideoGeneratorProps {
 }
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
+  const { t } = useTranslation();
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
@@ -28,8 +30,8 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
   const handleGenerate = async () => {
     if (!canAfford(CREDIT_COSTS.VIDEO)) {
       setError(user
-        ? `Not enough credits. You need ${CREDIT_COSTS.VIDEO} but have ${credits}.`
-        : 'Not enough guest credits. Sign in to get more.');
+        ? t('errors.notEnoughCredits', { need: CREDIT_COSTS.VIDEO, have: credits })
+        : t('errors.notEnoughGuestCredits'));
       return;
     }
     setLoading(true);
@@ -45,23 +47,19 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
       spent = true;
       let url = '';
       if (mode === 'text-to-video') {
-        const prompt = effectivePrompt;
-        url = await generateBackgroundVideo(prompt, '9:16');
-        if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
-        else addGuestGeneration({ type: 'video', prompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
+        url = await generateBackgroundVideo(effectivePrompt, '9:16');
+        if (user) saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
+        else addGuestGeneration({ type: 'video', prompt: effectivePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
       } else if (mode === 'image-to-video' && uploadedImage) {
-        const prompt = effectivePrompt;
-        url = await generateVideoFromImage(uploadedImage, prompt, '9:16');
-        if (user) saveGeneration(user.uid, 'video', prompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
-        else addGuestGeneration({ type: 'video', prompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
+        url = await generateVideoFromImage(uploadedImage, effectivePrompt, '9:16');
+        if (user) saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
+        else addGuestGeneration({ type: 'video', prompt: effectivePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
       }
       setVideoUrl(url);
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       if (spent) await refund(CREDIT_COSTS.VIDEO);
-      setError(e instanceof ContentRejectedError
-        ? e.message
-        : 'Video generation failed. Please try again.');
+      setError(e instanceof ContentRejectedError ? e.message : t('errors.generateVideo'));
     } finally {
       setLoading(false);
     }
@@ -77,7 +75,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="text-2xl">🎥</span> Video Studio
+              <span className="text-2xl">🎥</span> {t('video.heading')}
             </h3>
             <span className="text-xs text-gray-400">⭐ {credits} credits</span>
           </div>
@@ -87,13 +85,13 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
               className={`flex-1 py-1 text-xs font-bold rounded-md ${mode === 'text-to-video' ? 'bg-white shadow text-navy-900' : 'text-gray-500'}`}
               onClick={() => setMode('text-to-video')}
             >
-              Text to Video
+              {t('video.textToVideo')}
             </button>
             <button
               className={`flex-1 py-1 text-xs font-bold rounded-md ${mode === 'image-to-video' ? 'bg-white shadow text-navy-900' : 'text-gray-500'}`}
               onClick={() => setMode('image-to-video')}
             >
-              Image to Video
+              {t('video.imageToVideo')}
             </button>
           </div>
 
@@ -114,17 +112,17 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
                   className="hidden"
                 />
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full text-sm">
-                  {uploadedImage ? uploadedImage.name : 'Upload Reference Image'}
+                  {uploadedImage ? uploadedImage.name : t('video.uploadImage')}
                 </Button>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Animation Prompt</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('video.animationPrompt')}</label>
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-saffron-500 outline-none"
                 rows={4}
-                placeholder={mode === 'image-to-video' ? 'Describe how to animate the image...' : 'Describe the scene (e.g., Golden Temple holy pond)...'}
+                placeholder={mode === 'image-to-video' ? t('video.animatePlaceholder') : t('video.scenePlaceholder')}
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
               />
@@ -136,11 +134,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
               disabled={mode === 'image-to-video' && !uploadedImage}
               className="w-full"
             >
-              {loading ? 'Generating Veo Video...' : `Generate Video — ${CREDIT_COSTS.VIDEO} credits`}
+              {loading ? t('video.generating') : t('video.generate', { cost: CREDIT_COSTS.VIDEO })}
             </Button>
 
             <div className="bg-yellow-50 p-3 rounded-lg text-xs text-yellow-800 border border-yellow-200">
-              <strong>Note:</strong> Video generation (Veo) takes 1–2 minutes. Please be patient.
+              <strong>Note:</strong> {t('video.note')}
             </div>
           </div>
         </div>
@@ -156,7 +154,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
                   <p className="text-white font-gurmukhi text-center text-sm drop-shadow-lg mb-2 line-clamp-4">
                     {hukumnama.gurmukhi}
                   </p>
-                  <p className="text-saffron-300 text-center text-xs">Full Hukumnama Today</p>
+                  <p className="text-saffron-300 text-center text-xs">{t('hukumnama.langGurmukhi')}</p>
                 </div>
               )}
             </div>
@@ -164,7 +162,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         ) : (
           <div className="text-center text-gray-400">
             <p className="text-4xl mb-2">🎬</p>
-            <p>Generated video will appear here</p>
+            <p>{t('video.emptyMessage')}</p>
           </div>
         )}
       </div>

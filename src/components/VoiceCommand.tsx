@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { VoiceRecorder } from '@/services/voiceRecorder';
 import { processVoiceIntent } from '@/services/geminiService';
 import { VoiceIntentResult } from '@/types';
 import Button from './Button';
 
 const VoiceCommand: React.FC = () => {
-  const [recording, setRecording] = useState(false);
+  const { t } = useTranslation();
+  const [recording, setRecording]   = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<VoiceIntentResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult]         = useState<VoiceIntentResult | null>(null);
+  const [error, setError]           = useState<string | null>(null);
   const recorder = React.useRef(new VoiceRecorder());
 
   const toggleRecording = async () => {
@@ -22,7 +24,7 @@ const VoiceCommand: React.FC = () => {
         setResult(response);
       } catch (e) {
         console.error(e);
-        setError("Error processing voice command. Please try again.");
+        setError(t('voice.errorProcess'));
       } finally {
         setProcessing(false);
       }
@@ -33,21 +35,21 @@ const VoiceCommand: React.FC = () => {
         setResult(null);
         setError(null);
       } catch {
-        setError("Microphone access denied. Please allow microphone access in your browser settings.");
+        setError(t('voice.errorMic'));
       }
     }
   };
+
+  void Button; // suppress unused import warning if Button isn't rendered directly
 
   return (
     <div className="max-w-xl mx-auto text-center space-y-8 animate-fade-in-up">
       <div className="bg-gradient-to-br from-navy-900 to-navy-800 rounded-3xl p-10 text-white shadow-xl relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_50%_50%,white,transparent_70%)]" />
 
-        <h3 className="text-2xl font-bold mb-2 relative z-10">Voice Command</h3>
-        <p className="text-navy-200 mb-8 relative z-10">
-          Speak naturally in English or Punjabi.<br />
-          Try "Create 5 peace quotes" or "Make a hukumnama status"
-        </p>
+        <h3 className="text-2xl font-bold mb-2 relative z-10">{t('voice.heading')}</h3>
+        <p className="text-navy-200 mb-2 relative z-10">{t('voice.subtitle')}</p>
+        <p className="text-navy-300 text-sm mb-8 relative z-10 italic">{t('voice.hint')}</p>
 
         <button
           onClick={toggleRecording}
@@ -68,7 +70,7 @@ const VoiceCommand: React.FC = () => {
           )}
         </button>
         <p className="mt-4 text-sm font-medium relative z-10">
-          {recording ? "Listening... Tap to stop" : processing ? "Thinking..." : "Tap to Speak"}
+          {recording ? t('voice.listening') : processing ? t('voice.thinking') : t('voice.tapToSpeak')}
         </p>
       </div>
 
@@ -80,20 +82,20 @@ const VoiceCommand: React.FC = () => {
 
       {result && (
         <div className="bg-white text-left p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h4 className="font-bold text-gray-500 text-xs uppercase mb-4">Gemini Analysis</h4>
+          <h4 className="font-bold text-gray-500 text-xs uppercase mb-4">{t('voice.analysisHeading')}</h4>
 
           <div className="mb-4">
-            <span className="block text-xs text-gray-400 mb-1">Transcript</span>
+            <span className="block text-xs text-gray-400 mb-1">{t('voice.transcript')}</span>
             <div className="text-lg text-gray-900 font-medium">"{result.transcript}"</div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-gray-50 p-3 rounded-lg">
-              <span className="block text-xs text-gray-400 mb-1">Intent</span>
+              <span className="block text-xs text-gray-400 mb-1">{t('voice.intent')}</span>
               <div className="text-navy-800 font-bold font-mono text-sm">{result.intent}</div>
             </div>
             <div className="bg-gray-50 p-3 rounded-lg">
-              <span className="block text-xs text-gray-400 mb-1">Parameters</span>
+              <span className="block text-xs text-gray-400 mb-1">{t('voice.parameters')}</span>
               <div className="text-navy-800 font-mono text-xs">
                 {JSON.stringify(result.parameters).replace(/["{}]/g, '').replace(/:/g, ': ').replace(/,/g, ', ')}
               </div>
@@ -101,16 +103,14 @@ const VoiceCommand: React.FC = () => {
           </div>
 
           <div>
-            <span className="block text-xs text-gray-400 mb-1">Generated System Prompt</span>
+            <span className="block text-xs text-gray-400 mb-1">{t('voice.generatedPrompt')}</span>
             <div className="bg-gray-900 text-gray-300 p-3 rounded-lg font-mono text-xs break-all">
               {result.suggestedPrompt}
             </div>
           </div>
 
           <div className="mt-4">
-            <p className="text-xs text-gray-400 text-center">
-              Switch to the relevant tab above to execute this action.
-            </p>
+            <p className="text-xs text-gray-400 text-center">{t('voice.switchTabHint')}</p>
           </div>
         </div>
       )}

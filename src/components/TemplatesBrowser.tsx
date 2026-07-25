@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TEMPLATES, CATEGORY_META } from '@/constants/templates';
 import type { ContentTemplate, TemplateCategory } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
@@ -19,18 +20,10 @@ function interpolate(template: string, vars: Record<string, string>): string {
 
 type CategoryFilter = 'all' | TemplateCategory;
 
-const ALL_FILTERS: { id: CategoryFilter; label: string; emoji: string }[] = [
-  { id: 'all', label: 'All', emoji: '🌟' },
-  ...Object.entries(CATEGORY_META).map(([id, meta]) => ({
-    id: id as TemplateCategory,
-    label: meta.label,
-    emoji: meta.emoji,
-  })),
-];
-
 // ─── Single template card ─────────────────────────────────────────────────────
 
 const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => {
+  const { t } = useTranslation();
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
@@ -44,10 +37,10 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     return defaults;
   });
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult]   = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
-  const cost = template.creditCost;
+  const cost    = template.creditCost;
   const isVideo = template.mediaType === 'video';
 
   const allRequiredFilled = (template.variables ?? [])
@@ -56,7 +49,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
 
   const handleGenerate = async () => {
     if (!canAfford(cost)) {
-      setError(`Not enough credits. You need ${cost} but have ${credits}.`);
+      setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
       return;
     }
     setLoading(true);
@@ -84,7 +77,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
       if (spent) await refund(cost);
       setError(e instanceof ContentRejectedError
         ? e.message
-        : isVideo ? 'Video generation failed. Please try again.' : 'Image generation failed. Please try again.');
+        : isVideo ? t('errors.generateVideo') : t('errors.generateImage'));
       console.error(e);
     } finally {
       setLoading(false);
@@ -113,7 +106,6 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
 
   return (
     <div className={`bg-white rounded-2xl border transition-shadow ${expanded ? 'border-saffron-300 shadow-lg' : 'border-gray-100 shadow-sm hover:shadow-md'}`}>
-      {/* Header — always visible */}
       <button
         className="w-full text-left p-4 flex items-start gap-3"
         onClick={() => { setExpanded(e => !e); setResult(null); setError(null); }}
@@ -124,7 +116,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
             <p className="font-semibold text-gray-900 text-sm">{template.name}</p>
             <div className="flex items-center gap-1.5 shrink-0">
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isVideo ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
-                {isVideo ? '🎬 Video' : '🖼️ Image'}
+                {isVideo ? t('templates.typeVideo') : t('templates.typeImage')}
               </span>
               <span className="text-xs text-gray-400 font-medium">{cost}⭐</span>
             </div>
@@ -139,10 +131,8 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         <span className={`text-gray-400 text-xs mt-1 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
       </button>
 
-      {/* Expanded panel */}
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-50 pt-4 space-y-4">
-          {/* Variable inputs */}
           {(template.variables ?? []).map(variable => (
             <div key={variable.key}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -181,7 +171,6 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{error}</div>
           )}
 
-          {/* Result */}
           {result && (
             <div className="rounded-xl overflow-hidden border border-gray-100">
               {isVideo ? (
@@ -194,13 +183,13 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
                   onClick={handleDownload}
                   className="flex-1 text-xs py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 font-medium text-gray-700"
                 >
-                  ⬇️ Download
+                  {t('templates.download')}
                 </button>
                 <button
-                  onClick={() => { setResult(null); }}
+                  onClick={() => setResult(null)}
                   className="text-xs py-2 px-3 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg bg-white"
                 >
-                  ↺ Redo
+                  {t('templates.redo')}
                 </button>
               </div>
             </div>
@@ -214,14 +203,14 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
               className="w-full"
             >
               {loading
-                ? (isVideo ? 'Generating video (1–2 min)…' : 'Generating image…')
-                : `Generate — ${cost} credit${cost !== 1 ? 's' : ''}`}
+                ? (isVideo ? t('templates.generatingVideo') : t('templates.generatingImage'))
+                : t('templates.generate', { count: cost, cost })}
             </Button>
           )}
 
           {isVideo && !result && (
             <p className="text-xs text-amber-600 text-center bg-amber-50 border border-amber-200 rounded-lg p-2">
-              ⏳ Video generation takes 1–2 minutes. Please wait after clicking.
+              {t('templates.videoNote')}
             </p>
           )}
         </div>
@@ -233,36 +222,43 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
 // ─── Main browser ─────────────────────────────────────────────────────────────
 
 const TemplatesBrowser: React.FC = () => {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
   const [search, setSearch] = useState('');
 
-  const filtered = TEMPLATES.filter(t => {
-    const categoryMatch = activeCategory === 'all' || t.category === activeCategory;
-    const searchMatch = search === '' ||
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.tags.some(tag => tag.includes(search.toLowerCase()));
+  const ALL_FILTERS: { id: CategoryFilter; label: string; emoji: string }[] = [
+    { id: 'all', label: t('templates.filterAll'), emoji: '🌟' },
+    ...Object.entries(CATEGORY_META).map(([id, meta]) => ({
+      id: id as TemplateCategory,
+      label: meta.label,
+      emoji: meta.emoji,
+    })),
+  ];
+
+  const filtered = TEMPLATES.filter(tp => {
+    const categoryMatch = activeCategory === 'all' || tp.category === activeCategory;
+    const searchMatch   = search === '' ||
+      tp.name.toLowerCase().includes(search.toLowerCase()) ||
+      tp.tags.some(tag => tag.includes(search.toLowerCase()));
     return categoryMatch && searchMatch;
   });
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold text-gray-900 mb-1">✨ Sikh Content Templates</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-1">✨ {t('templates.heading')}</h3>
         <p className="text-sm text-gray-500 mb-4">
-          {TEMPLATES.length} curated templates — pick one, customise, generate.
+          {t('templates.subheading', { count: TEMPLATES.length })}
         </p>
 
-        {/* Search */}
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search templates…"
+          placeholder={t('templates.searchPlaceholder')}
           className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-saffron-500 outline-none mb-4"
         />
 
-        {/* Category pills */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {ALL_FILTERS.map(f => (
             <button
@@ -280,29 +276,27 @@ const TemplatesBrowser: React.FC = () => {
         </div>
       </div>
 
-      {/* Results count */}
       {(search || activeCategory !== 'all') && (
         <p className="text-sm text-gray-400 px-1">
-          {filtered.length} template{filtered.length !== 1 ? 's' : ''} found
+          {t('templates.found', { count: filtered.length })}
         </p>
       )}
 
-      {/* Template grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <p className="text-3xl mb-3">🔍</p>
-          <p className="text-gray-500 font-medium">No templates match your search</p>
+          <p className="text-gray-500 font-medium">{t('templates.noMatch')}</p>
           <button
             onClick={() => { setSearch(''); setActiveCategory('all'); }}
             className="mt-3 text-saffron-600 text-sm hover:underline"
           >
-            Clear filters
+            {t('templates.clearFilters')}
           </button>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {filtered.map(t => (
-            <TemplateCard key={t.id} template={t} />
+          {filtered.map(tp => (
+            <TemplateCard key={tp.id} template={tp} />
           ))}
         </div>
       )}

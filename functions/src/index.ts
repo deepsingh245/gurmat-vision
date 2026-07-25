@@ -71,7 +71,10 @@ async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
   } catch { /* non-critical — Hukamnama text still returned without summary */ }
 
   const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
-  await admin.firestore().collection('hukamnama').doc(dateKey).set(doc);
+  // Cache write is best-effort — if it fails the user still gets the data this request
+  try {
+    await admin.firestore().collection('hukamnama').doc(dateKey).set(doc);
+  } catch { /* non-critical */ }
   return doc;
 }
 

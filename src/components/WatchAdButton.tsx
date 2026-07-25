@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/hooks/useCredits';
 
-const AD_DURATION = 30; // seconds
-const MAX_DAILY = 3;
+const AD_DURATION = 30;
+const MAX_DAILY   = 3;
 
 interface WatchAdButtonProps {
   onSuccess?: (creditsGranted: number) => void;
@@ -14,19 +15,18 @@ interface WatchAdButtonProps {
 type State = 'idle' | 'watching' | 'claiming' | 'done' | 'limited' | 'error';
 
 const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
+  const { t } = useTranslation();
   const { user, userDoc, refreshUserDoc } = useAuth();
   const { credits } = useCredits();
 
-  const [state, setState] = useState<State>('idle');
+  const [state, setState]       = useState<State>('idle');
   const [countdown, setCountdown] = useState(AD_DURATION);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // How many rewards has the user claimed today?
   const today = new Date().toISOString().split('T')[0];
   const rewardsToday = userDoc?.lastAdReward === today ? (userDoc?.adRewardsToday ?? 0) : 0;
   const remaining = MAX_DAILY - rewardsToday;
 
-  // Countdown tick while watching
   useEffect(() => {
     if (state !== 'watching') return;
     if (countdown <= 0) { handleClaimReward(); return; }
@@ -42,52 +42,47 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
       await refreshUserDoc();
       setState('done');
       onSuccess?.(result.data.creditsGranted);
-      // Reset to idle after 3s so user can see the confirmation
       setTimeout(() => { setState('idle'); setCountdown(AD_DURATION); }, 3000);
     } catch (e: unknown) {
       const msg = (e as { message?: string })?.message ?? '';
       if (msg.includes('resource-exhausted') || msg.includes('Daily limit')) {
         setState('limited');
       } else {
-        setErrorMsg('Something went wrong. Please try again.');
+        setErrorMsg(t('watchAd.error'));
         setState('error');
       }
     }
-  }, [onSuccess, refreshUserDoc]);
+  }, [onSuccess, refreshUserDoc, t]);
 
   if (!user) return null;
 
-  // Already at daily limit
   if (remaining <= 0 || state === 'limited') {
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-        <p className="text-amber-700 font-semibold text-sm">Daily limit reached</p>
+        <p className="text-amber-700 font-semibold text-sm">{t('watchAd.limitReached')}</p>
         <p className="text-amber-600 text-xs mt-1">
-          You've earned {MAX_DAILY}×{5} = {MAX_DAILY * 5} credits from ads today. Come back tomorrow!
+          {t('watchAd.limitDesc', { total: MAX_DAILY * 5 })}
         </p>
       </div>
     );
   }
 
-  // Watching state — simulated ad countdown
   if (state === 'watching') {
     const progress = ((AD_DURATION - countdown) / AD_DURATION) * 100;
     return (
       <div className="bg-navy-900 rounded-2xl overflow-hidden">
-        {/* Simulated ad creative */}
         <div className="relative bg-gradient-to-br from-navy-800 to-navy-900 aspect-video flex flex-col items-center justify-center text-white p-6 text-center">
           <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded">
-            Ad — {countdown}s
+            {t('watchAd.adCountdown', { seconds: countdown })}
           </div>
           <p className="text-4xl mb-3">🌟</p>
-          <p className="text-lg font-bold">Hukumnama AI Studio</p>
-          <p className="text-saffron-300 text-sm mt-1">Spreading Gurbani through AI</p>
+          <p className="text-lg font-bold">{t('watchAd.adTitle')}</p>
+          <p className="text-saffron-300 text-sm mt-1">{t('watchAd.adSubtitle')}</p>
           <p className="text-white/50 text-xs mt-4">
-            {countdown > 0 ? `Watch for ${countdown}s to earn your credits` : 'Claiming your reward…'}
+            {countdown > 0 ? t('watchAd.watchFor', { seconds: countdown }) : t('watchAd.claiming')}
           </p>
         </div>
 
-        {/* Progress bar */}
         <div className="h-1.5 bg-navy-700">
           <div
             className="h-full bg-saffron-400 transition-all duration-1000"
@@ -96,38 +91,33 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
         </div>
 
         <div className="p-4 text-center">
-          <p className="text-white/70 text-xs">
-            Keep this tab open — your +5 credits arrive when the ad finishes
-          </p>
+          <p className="text-white/70 text-xs">{t('watchAd.keepOpen')}</p>
         </div>
       </div>
     );
   }
 
-  // Claiming
   if (state === 'claiming') {
     return (
       <div className="bg-saffron-50 border border-saffron-200 rounded-xl p-6 text-center">
         <div className="w-8 h-8 border-4 border-saffron-200 border-t-saffron-600 rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-saffron-700 font-semibold text-sm">Crediting your account…</p>
+        <p className="text-saffron-700 font-semibold text-sm">{t('watchAd.crediting')}</p>
       </div>
     );
   }
 
-  // Done
   if (state === 'done') {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
         <p className="text-3xl mb-2">✅</p>
-        <p className="text-green-700 font-bold">+5 credits added!</p>
+        <p className="text-green-700 font-bold">{t('watchAd.success')}</p>
         <p className="text-green-600 text-sm mt-1">
-          Balance: {credits} credits · {remaining - 1} more ad{remaining - 1 !== 1 ? 's' : ''} available today
+          {t('watchAd.successBalance', { credits })}
         </p>
       </div>
     );
   }
 
-  // Error
   if (state === 'error') {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
@@ -136,13 +126,12 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
           onClick={() => { setState('idle'); setCountdown(AD_DURATION); }}
           className="text-xs text-red-600 underline"
         >
-          Try again
+          {t('watchAd.tryAgain')}
         </button>
       </div>
     );
   }
 
-  // Idle — show the button
   return (
     <button
       onClick={() => setState('watching')}
@@ -153,9 +142,9 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
           ▶
         </div>
         <div className="text-left">
-          <p className="font-bold text-sm">Watch Ad — Earn +5 Credits</p>
+          <p className="font-bold text-sm">{t('watchAd.watchBtn')}</p>
           <p className="text-white/60 text-xs mt-0.5">
-            {remaining} of {MAX_DAILY} remaining today · 30 seconds
+            {t('watchAd.watchBtnSub', { remaining, max: MAX_DAILY })}
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
@@ -11,12 +12,20 @@ interface CreationsPageProps {
 
 // ─── Type metadata ────────────────────────────────────────────────────────────
 
-const TYPE_LABELS: Record<GenerationType, { label: string; emoji: string; color: string }> = {
-  image:       { label: 'Image',      emoji: '🖼️',  color: 'bg-blue-50 text-blue-700' },
-  'quote-card':{ label: 'Quote Card', emoji: '🌿',  color: 'bg-green-50 text-green-700' },
-  poster:      { label: 'Poster',     emoji: '✍️',  color: 'bg-purple-50 text-purple-700' },
-  video:       { label: 'Video',      emoji: '🎬',  color: 'bg-red-50 text-red-700' },
-  reel:        { label: 'Reel',       emoji: '🎥',  color: 'bg-pink-50 text-pink-700' },
+const TYPE_COLOR: Record<GenerationType, string> = {
+  image:        'bg-blue-50 text-blue-700',
+  'quote-card': 'bg-green-50 text-green-700',
+  poster:       'bg-purple-50 text-purple-700',
+  video:        'bg-red-50 text-red-700',
+  reel:         'bg-pink-50 text-pink-700',
+};
+
+const TYPE_EMOJI: Record<GenerationType, string> = {
+  image:        '🖼️',
+  'quote-card': '🌿',
+  poster:       '✍️',
+  video:        '🎬',
+  reel:         '🎥',
 };
 
 const isVideoType = (type: GenerationType) => type === 'video' || type === 'reel';
@@ -24,12 +33,6 @@ const isVideoType = (type: GenerationType) => type === 'video' || type === 'reel
 // ─── Filter tabs ─────────────────────────────────────────────────────────────
 
 type FilterTab = 'all' | 'images' | 'videos';
-
-const FILTER_TABS: { id: FilterTab; label: string }[] = [
-  { id: 'all',    label: 'All' },
-  { id: 'images', label: 'Images' },
-  { id: 'videos', label: 'Videos' },
-];
 
 function matchesFilter(type: GenerationType, filter: FilterTab): boolean {
   if (filter === 'all') return true;
@@ -64,7 +67,10 @@ interface CardProps {
 }
 
 const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
-  const meta = TYPE_LABELS[item.type] ?? { label: item.type, emoji: '📄', color: 'bg-gray-50 text-gray-700' };
+  const { t } = useTranslation();
+  const color = TYPE_COLOR[item.type] ?? 'bg-gray-50 text-gray-700';
+  const emoji = TYPE_EMOJI[item.type] ?? '📄';
+  const typeKey = `creations.type${item.type.charAt(0).toUpperCase() + item.type.slice(1).replace('-c', 'C')}` as const;
   const isVideo = isVideoType(item.type);
   const ext = isVideo ? 'mp4' : 'png';
   const filename = `hukumnama-${item.type}-${item.id?.slice(0, 6) ?? 'file'}.${ext}`;
@@ -82,6 +88,17 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
       setConfirmDelete(false);
     }
   };
+
+  const typeLabel = (() => {
+    const map: Record<GenerationType, string> = {
+      image:        t('creations.typeImage'),
+      'quote-card': t('creations.typeQuoteCard'),
+      poster:       t('creations.typePoster'),
+      video:        t('creations.typeVideo'),
+      reel:         t('creations.typeReel'),
+    };
+    return map[item.type] ?? item.type;
+  })();
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col group">
@@ -108,7 +125,7 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
           <button
             onClick={() => downloadFile(item.resultUrl, filename)}
             className="bg-white text-gray-900 rounded-full p-2 shadow-lg hover:bg-saffron-50 transition-colors"
-            title="Download"
+            title={t('creations.save')}
           >
             ⬇️
           </button>
@@ -118,8 +135,8 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
       {/* Info row */}
       <div className="p-3 flex-1 flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
-            {meta.emoji} {meta.label}
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>
+            {emoji} {typeLabel}
           </span>
           <span className="text-xs text-gray-400">⭐ {item.creditsUsed}</span>
         </div>
@@ -132,13 +149,13 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
               disabled={deleting}
               className="flex-1 text-xs py-1.5 bg-red-500 hover:bg-red-600 text-white rounded font-semibold disabled:opacity-60"
             >
-              {deleting ? '...' : 'Yes, delete'}
+              {deleting ? '...' : t('creations.confirmDelete')}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="flex-1 text-xs py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded font-semibold"
             >
-              Cancel
+              {t('creations.cancel')}
             </button>
           </div>
         ) : (
@@ -147,7 +164,7 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
               onClick={() => downloadFile(item.resultUrl, filename)}
               className="flex-1 text-xs py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600"
             >
-              ⬇️ Save
+              {t('creations.save')}
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
@@ -161,13 +178,22 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
       </div>
     </div>
   );
+
+  void typeKey; // suppress unused var lint — kept for type safety reference
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { guestGenerations, removeGuestGeneration } = useGuestSession();
+
+  const FILTER_TABS: { id: FilterTab; label: string }[] = [
+    { id: 'all',    label: t('creations.filterAll') },
+    { id: 'images', label: t('creations.filterImages') },
+    { id: 'videos', label: t('creations.filterVideos') },
+  ];
 
   // Declare all state at top — used by both guest and auth branches
   const [items, setItems]             = useState<Generation[]>([]);
@@ -186,14 +212,14 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
-          ← Back
+          {t('nav.back')}
         </button>
 
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">My Creations</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('creations.title')}</h2>
           {guestGenerations.length > 0 && (
             <span className="text-sm text-gray-400">
-              {guestGenerations.length} this session
+              {t('creations.sessionCount', { count: guestGenerations.length })}
             </span>
           )}
         </div>
@@ -217,16 +243,15 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         {visible.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
             <p className="text-4xl mb-4">🌿</p>
-            <p className="font-semibold text-gray-700 mb-2">No creations yet this session</p>
+            <p className="font-semibold text-gray-700 mb-2">{t('creations.guestEmpty')}</p>
             <p className="text-sm text-gray-400 max-w-xs mx-auto mb-4">
-              Generated images, videos, and quote cards will appear here.
-              Sign in to save your creations permanently.
+              {t('creations.guestEmptyDesc')}
             </p>
             <button
               onClick={onBack}
               className="text-saffron-600 hover:text-saffron-700 text-sm font-semibold"
             >
-              Go to Studio →
+              {t('creations.goToStudio')}
             </button>
           </div>
         ) : (
@@ -255,7 +280,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
       setCursor(lastDoc);
       setHasMore(lastDoc !== null);
     } catch {
-      setError('Failed to load creations. Please try again.');
+      setError(t('creations.loadError'));
     } finally {
       reset ? setLoading(false) : setLoadingMore(false);
     }
@@ -278,13 +303,15 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
-        ← Back
+        {t('nav.back')}
       </button>
 
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">My Creations</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t('creations.title')}</h2>
         {items.length > 0 && (
-          <span className="text-sm text-gray-400">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+          <span className="text-sm text-gray-400">
+            {t('creations.itemCount', { count: items.length })}
+          </span>
         )}
       </div>
 
@@ -307,7 +334,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
           {error}
-          <button onClick={() => fetchPage(true)} className="ml-2 underline">Retry</button>
+          <button onClick={() => fetchPage(true)} className="ml-2 underline">{t('creations.retry')}</button>
         </div>
       )}
 
@@ -321,16 +348,14 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-4xl mb-4">🌿</p>
           <p className="font-semibold text-gray-700 mb-2">
-            {items.length === 0 ? 'No creations yet' : `No ${filter} found`}
+            {items.length === 0 ? t('creations.authEmpty') : t('creations.authEmptyFilter')}
           </p>
           <p className="text-sm text-gray-400 max-w-xs mx-auto">
-            {items.length === 0
-              ? 'Your generated images, videos, and quote cards will appear here.'
-              : 'Try a different filter or generate new content.'}
+            {items.length === 0 ? t('creations.authEmptyDesc') : t('creations.authEmptyFilterDesc')}
           </p>
           {items.length === 0 && (
             <button onClick={onBack} className="mt-4 text-saffron-600 hover:text-saffron-700 text-sm font-semibold">
-              Go to Studio →
+              {t('creations.goToStudio')}
             </button>
           )}
         </div>
@@ -349,7 +374,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
                 disabled={loadingMore}
                 className="px-6 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 shadow-sm"
               >
-                {loadingMore ? 'Loading...' : 'Load more'}
+                {loadingMore ? t('creations.loadingMore') : t('creations.loadMore')}
               </button>
             </div>
           )}

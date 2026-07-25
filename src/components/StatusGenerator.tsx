@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateStatusImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
@@ -13,23 +14,24 @@ interface StatusGeneratorProps {
 }
 
 const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
+  const { t } = useTranslation();
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
-  const [loading, setLoading]               = useState(false);
-  const [imageUrl, setImageUrl]             = useState<string | null>(null);
-  const [customPrompt, setCustomPrompt]     = useState('');
-  const [size, setSize]                     = useState<'1K' | '2K' | '4K'>('1K');
+  const [loading, setLoading]                 = useState(false);
+  const [imageUrl, setImageUrl]               = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt]       = useState('');
+  const [size, setSize]                       = useState<'1K' | '2K' | '4K'>('1K');
   const [showTextOverlay, setShowTextOverlay] = useState(true);
-  const [error, setError]                   = useState<string | null>(null);
+  const [error, setError]                     = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!hukumnama && !customPrompt) return;
     if (!canAfford(CREDIT_COSTS.IMAGE)) {
       setError(user
-        ? `Not enough credits. You need ${CREDIT_COSTS.IMAGE} but have ${credits}.`
-        : 'Not enough guest credits. Sign in to get more.');
+        ? t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits })
+        : t('errors.notEnoughGuestCredits'));
       return;
     }
     setLoading(true);
@@ -50,9 +52,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       if (spent) await refund(CREDIT_COSTS.IMAGE);
-      setError(e instanceof ContentRejectedError
-        ? e.message
-        : 'Failed to generate image. Please try again.');
+      setError(e instanceof ContentRejectedError ? e.message : t('errors.generateImage'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="text-2xl">🖼️</span> Status Image
+              <span className="text-2xl">🖼️</span> {t('status.heading')}
             </h3>
             <span className="text-xs text-gray-400">⭐ {credits} credits</span>
           </div>
@@ -87,18 +87,20 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('status.promptLabel')}</label>
               <textarea
                 className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-saffron-500 outline-none"
                 rows={4}
-                placeholder={hukumnama ? `Using daily summary: ${hukumnama.summary}...` : 'Describe your status background...'}
+                placeholder={hukumnama
+                  ? t('status.promptPlaceholderSummary', { summary: hukumnama.summary })
+                  : t('status.promptPlaceholder')}
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quality</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('status.qualityLabel')}</label>
               <div className="flex space-x-2">
                 {(['1K', '2K', '4K'] as const).map((s) => (
                   <button
@@ -120,11 +122,11 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
                 onChange={(e) => setShowTextOverlay(e.target.checked)}
                 className="rounded text-saffron-600 focus:ring-saffron-500"
               />
-              <label htmlFor="overlay" className="text-sm text-gray-700">Preview with Text Overlay</label>
+              <label htmlFor="overlay" className="text-sm text-gray-700">{t('status.textOverlay')}</label>
             </div>
 
             <Button onClick={handleGenerate} isLoading={loading} className="w-full">
-              {loading ? 'Generating Art...' : `Generate Status — ${CREDIT_COSTS.IMAGE} credit`}
+              {loading ? t('status.generating') : t('status.generate', { cost: CREDIT_COSTS.IMAGE })}
             </Button>
           </div>
         </div>
@@ -142,20 +144,22 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
                     <p className="text-white font-gurmukhi text-lg mb-2 drop-shadow-md line-clamp-6">
                       {hukumnama.gurmukhi}
                     </p>
-                    <p className="text-saffron-200 text-xs uppercase tracking-widest mt-2 font-bold">Today's Hukumnama</p>
+                    <p className="text-saffron-200 text-xs uppercase tracking-widest mt-2 font-bold">
+                      {t('status.overlayLabel')}
+                    </p>
                   </div>
                 </div>
               )}
 
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                <Button variant="secondary" onClick={downloadImage}>Download Image</Button>
+                <Button variant="secondary" onClick={downloadImage}>{t('status.downloadImage')}</Button>
               </div>
             </div>
           </div>
         ) : (
           <div className="text-center text-gray-400">
             <p className="text-4xl mb-2">🎨</p>
-            <p>Generated image will appear here</p>
+            <p>{t('status.emptyMessage')}</p>
           </div>
         )}
       </div>

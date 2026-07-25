@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateQuotePack, generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
@@ -9,21 +10,22 @@ import { saveGeneration } from '@/firebase/firestore';
 import Button from './Button';
 
 const QuotePackGenerator: React.FC = () => {
+  const { t } = useTranslation();
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
-  const [topic, setTopic]         = useState('');
-  const [quotes, setQuotes]       = useState<GurbaniQuote[]>([]);
-  const [loading, setLoading]     = useState(false);
+  const [topic, setTopic]               = useState('');
+  const [quotes, setQuotes]             = useState<GurbaniQuote[]>([]);
+  const [loading, setLoading]           = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [mediaUrls, setMediaUrls] = useState<{ [key: number]: { img?: string; vid?: string } }>({});
-  const [error, setError]         = useState<string | null>(null);
+  const [mediaUrls, setMediaUrls]       = useState<{ [key: number]: { img?: string; vid?: string } }>({});
+  const [error, setError]               = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!topic) return;
     if (!canAfford(CREDIT_COSTS.QUOTE_PACK)) {
-      setError(`Not enough credits. You need ${CREDIT_COSTS.QUOTE_PACK} but have ${credits}.`);
+      setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.QUOTE_PACK, have: credits }));
       return;
     }
     setLoading(true);
@@ -39,7 +41,7 @@ const QuotePackGenerator: React.FC = () => {
       setQuotes(data);
     } catch (e) {
       if (spent) await refund(CREDIT_COSTS.QUOTE_PACK);
-      setError(e instanceof ContentRejectedError ? e.message : 'Failed to generate quotes. Please try again.');
+      setError(e instanceof ContentRejectedError ? e.message : t('errors.generateQuotes'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ const QuotePackGenerator: React.FC = () => {
   const generateMedia = async (index: number, type: 'image' | 'video') => {
     const cost = type === 'image' ? CREDIT_COSTS.IMAGE : CREDIT_COSTS.VIDEO;
     if (!canAfford(cost)) {
-      setError(`Not enough credits. You need ${cost} but have ${credits}.`);
+      setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
       return;
     }
     setProcessingId(index);
@@ -72,7 +74,7 @@ const QuotePackGenerator: React.FC = () => {
       window.dispatchEvent(new Event('generation-complete'));
     } catch {
       if (spent) await refund(cost);
-      setError(`Failed to generate ${type}. Please try again.`);
+      setError(t('errors.generateMedia', { type }));
     } finally {
       setProcessingId(null);
     }
@@ -81,8 +83,8 @@ const QuotePackGenerator: React.FC = () => {
   return (
     <div className="animate-fade-in-up space-y-8">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center max-w-2xl mx-auto">
-        <h3 className="text-xl font-bold text-gray-800 mb-2">🌿 Gurbani Quote Packs</h3>
-        <p className="text-gray-500 mb-1 text-sm">Enter a topic and AI generates 5 social-ready quotes.</p>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">🌿 {t('quotes.heading')}</h3>
+        <p className="text-gray-500 mb-1 text-sm">{t('quotes.subheading')}</p>
         <p className="text-xs text-gray-400 mb-4">
           Pack: {CREDIT_COSTS.QUOTE_PACK} credit · Image: {CREDIT_COSTS.IMAGE} credit · Video: {CREDIT_COSTS.VIDEO} credits &nbsp;|&nbsp; ⭐ {credits} available
         </p>
@@ -99,11 +101,11 @@ const QuotePackGenerator: React.FC = () => {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-            placeholder="Enter topic (e.g. Peace, Courage, Love)..."
+            placeholder={t('quotes.topicPlaceholder')}
             className="flex-1 p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-saffron-500"
           />
           <Button onClick={handleGenerate} isLoading={loading}>
-            Generate — {CREDIT_COSTS.QUOTE_PACK} credit
+            {t('quotes.generate', { cost: CREDIT_COSTS.QUOTE_PACK })}
           </Button>
         </div>
       </div>
@@ -117,7 +119,7 @@ const QuotePackGenerator: React.FC = () => {
                 <div className="text-xs text-gray-400 italic mb-2 text-center">{quote.transliteration}</div>
                 <p className="text-gray-800 font-medium text-center mb-4">"{quote.translation}"</p>
                 <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600">
-                  <strong>Reflection:</strong> {quote.reflection}
+                  <strong>{t('quotes.reflection')}</strong> {quote.reflection}
                 </div>
               </div>
 
