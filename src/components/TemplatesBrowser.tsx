@@ -113,7 +113,9 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         <span className="text-2xl mt-0.5 shrink-0">{template.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold text-gray-900 text-sm">{template.name}</p>
+            <p className="font-semibold text-gray-900 text-sm">
+              {t(`templateData.${template.id}.name`, { defaultValue: template.name })}
+            </p>
             <div className="flex items-center gap-1.5 shrink-0">
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isVideo ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
                 {isVideo ? t('templates.typeVideo') : t('templates.typeImage')}
@@ -121,7 +123,9 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
               <span className="text-xs text-gray-400 font-medium">{cost}⭐</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{template.description}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+            {t(`templateData.${template.id}.desc`, { defaultValue: template.description })}
+          </p>
           <div className="flex flex-wrap gap-1 mt-2">
             {template.tags.slice(0, 3).map(tag => (
               <span key={tag} className="text-xs bg-gray-50 text-gray-400 px-1.5 py-0.5 rounded">#{tag}</span>
@@ -136,7 +140,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
           {(template.variables ?? []).map(variable => (
             <div key={variable.key}>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
-                {variable.label}
+                {t(`templateData.${template.id}.var_${variable.key}`, { defaultValue: variable.label })}
                 {variable.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
               {variable.type === 'select' ? (
@@ -160,7 +164,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
                   type="text"
                   value={vars[variable.key] ?? ''}
                   onChange={e => setVars(v => ({ ...v, [variable.key]: e.target.value }))}
-                  placeholder={variable.placeholder}
+                  placeholder={t(`templateData.${template.id}.var_${variable.key}_ph`, { defaultValue: variable.placeholder ?? '' })}
                   className="w-full text-sm p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-saffron-500 outline-none"
                 />
               )}
@@ -230,7 +234,7 @@ const TemplatesBrowser: React.FC = () => {
     { id: 'all', label: t('templates.filterAll'), emoji: '🌟' },
     ...Object.entries(CATEGORY_META).map(([id, meta]) => ({
       id: id as TemplateCategory,
-      label: meta.label,
+      label: t(`templateCategories.${id}`, { defaultValue: meta.label }),
       emoji: meta.emoji,
     })),
   ];
