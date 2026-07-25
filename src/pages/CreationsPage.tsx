@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,14 +59,83 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
+// ─── Lightbox ─────────────────────────────────────────────────────────────────
+
+const MediaLightbox: React.FC<{ item: Generation; onClose: () => void }> = ({ item, onClose }) => {
+  const { t } = useTranslation();
+  const isVideo = isVideoType(item.type);
+  const ext = isVideo ? 'mp4' : 'png';
+  const filename = `hukumnama-${item.type}-${item.id?.slice(0, 6) ?? 'file'}.${ext}`;
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+      onClick={e => { if (e.target === overlayRef.current) onClose(); }}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-xl transition-colors"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+
+      {/* Media */}
+      <div className="max-w-2xl w-full flex flex-col gap-4">
+        <div className="rounded-2xl overflow-hidden shadow-2xl bg-black">
+          {isVideo ? (
+            <video
+              src={item.resultUrl}
+              controls
+              autoPlay
+              className="w-full max-h-[75vh] object-contain"
+            />
+          ) : (
+            <img
+              src={item.resultUrl}
+              alt={item.prompt}
+              className="w-full max-h-[75vh] object-contain"
+            />
+          )}
+        </div>
+
+        {/* Prompt + actions */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-start justify-between gap-4">
+          <p className="text-sm text-white/80 leading-relaxed line-clamp-3 flex-1">{item.prompt}</p>
+          <button
+            onClick={() => downloadFile(item.resultUrl, filename)}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 bg-saffron-500 hover:bg-saffron-600 text-white rounded-lg text-sm font-semibold transition-colors"
+          >
+            ⬇️ {t('creations.save')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 interface CardProps {
   item: Generation;
   onDelete: (id: string) => Promise<void>;
+  onOpen: (item: Generation) => void;
 }
 
-const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
+const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
   const { t } = useTranslation();
   const color = TYPE_COLOR[item.type] ?? 'bg-gray-50 text-gray-700';
   const emoji = TYPE_EMOJI[item.type] ?? '📄';
@@ -102,8 +171,11 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col group">
-      {/* Media preview */}
-      <div className="relative aspect-square bg-gray-100 overflow-hidden">
+      {/* Media preview — click opens lightbox */}
+      <div
+        className="relative aspect-square bg-gray-100 overflow-hidden cursor-zoom-in"
+        onClick={() => onOpen(item)}
+      >
         {isVideo ? (
           <video
             src={item.resultUrl}
@@ -122,13 +194,9 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete }) => {
           />
         )}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-          <button
-            onClick={() => downloadFile(item.resultUrl, filename)}
-            className="bg-white text-gray-900 rounded-full p-2 shadow-lg hover:bg-saffron-50 transition-colors"
-            title={t('creations.save')}
-          >
-            ⬇️
-          </button>
+          <span className="bg-white/90 text-gray-900 rounded-full px-3 py-1.5 text-xs font-semibold shadow-lg">
+            🔍 View
+          </span>
         </div>
       </div>
 
@@ -203,6 +271,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
   const [hasMore, setHasMore]         = useState(false);
   const [filter, setFilter]           = useState<FilterTab>('all');
   const [error, setError]             = useState<string | null>(null);
+  const [lightboxItem, setLightboxItem] = useState<Generation | null>(null);
 
   // ─── Guest branch ───────────────────────────────────────────────────────────
   if (!user) {
@@ -210,6 +279,8 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
     const guestDelete = async (id: string) => { removeGuestGeneration(id); };
 
     return (
+      <>
+      {lightboxItem && <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />}
       <div className="max-w-4xl mx-auto px-4 py-8">
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
           {t('nav.back')}
@@ -257,11 +328,12 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {visible.map(item => (
-              <GenerationCard key={item.id} item={item} onDelete={guestDelete} />
+              <GenerationCard key={item.id} item={item} onDelete={guestDelete} onOpen={setLightboxItem} />
             ))}
           </div>
         )}
       </div>
+      </>
     );
   }
 
@@ -301,6 +373,8 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
   const visible = items.filter(i => matchesFilter(i.type, filter));
 
   return (
+    <>
+    {lightboxItem && <MediaLightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />}
     <div className="max-w-4xl mx-auto px-4 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6">
         {t('nav.back')}
@@ -363,7 +437,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {visible.map(item => (
-              <GenerationCard key={item.id} item={item} onDelete={handleAuthDelete} />
+              <GenerationCard key={item.id} item={item} onDelete={handleAuthDelete} onOpen={setLightboxItem} />
             ))}
           </div>
 
@@ -381,6 +455,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         </>
       )}
     </div>
+    </>
   );
 };
 
