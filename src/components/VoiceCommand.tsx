@@ -3,15 +3,29 @@ import { useTranslation } from 'react-i18next';
 import { VoiceRecorder } from '@/services/voiceRecorder';
 import { processVoiceIntent } from '@/services/geminiService';
 import { VoiceIntentResult } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import Button from './Button';
 
 const VoiceCommand: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [recording, setRecording]   = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult]         = useState<VoiceIntentResult | null>(null);
   const [error, setError]           = useState<string | null>(null);
   const recorder = React.useRef(new VoiceRecorder());
+
+  if (!user) {
+    return (
+      <div className="max-w-xl mx-auto text-center space-y-4 py-16 animate-fade-in-up">
+        <p className="text-5xl">🎤</p>
+        <p className="font-semibold text-gray-700">{t('voice.signInRequired')}</p>
+        <Button onClick={() => window.dispatchEvent(new Event('hukumnama:require-auth'))}>
+          {t('auth.signIn')}
+        </Button>
+      </div>
+    );
+  }
 
   const toggleRecording = async () => {
     if (recording) {
@@ -39,8 +53,6 @@ const VoiceCommand: React.FC = () => {
       }
     }
   };
-
-  void Button; // suppress unused import warning if Button isn't rendered directly
 
   return (
     <div className="max-w-xl mx-auto text-center space-y-8 animate-fade-in-up">

@@ -178,6 +178,7 @@
     "emptyMessage": "Generated video will appear here"
   },
   "voice": {
+    "signInRequired": "Sign in to use Voice Commands",
     "heading": "Voice Command",
     "subtitle": "Speak naturally in English or Punjabi.",
     "hint": "Try \"Create 5 peace quotes\" or \"Make a hukumnama status\"",
@@ -246,6 +247,9 @@
     "howSafety": "How Our Safety Layer Works",
     "tenGurus": "The Ten Gurus — Special Protection",
     "reporting": "Reporting a Concern"
+  },
+  "generate": {
+    "signInRequired": "Sign In to Generate"
   },
   "templateCategories": {
     "gurbani":     "Gurbani",

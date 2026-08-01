@@ -28,10 +28,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
   const fileInputRef                      = useRef<HTMLInputElement>(null);
 
   const handleGenerate = async () => {
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(CREDIT_COSTS.VIDEO)) {
-      setError(user
-        ? t('errors.notEnoughCredits', { need: CREDIT_COSTS.VIDEO, have: credits })
-        : t('errors.notEnoughGuestCredits'));
+      setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.VIDEO, have: credits }));
       return;
     }
     setLoading(true);
@@ -134,7 +133,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
               disabled={mode === 'image-to-video' && !uploadedImage}
               className="w-full"
             >
-              {loading ? t('video.generating') : t('video.generate', { cost: CREDIT_COSTS.VIDEO })}
+              {!user
+                ? t('generate.signInRequired')
+                : loading
+                  ? t('video.generating')
+                  : t('video.generate', { cost: CREDIT_COSTS.VIDEO })}
             </Button>
 
             <div className="bg-yellow-50 p-3 rounded-lg text-xs text-yellow-800 border border-yellow-200">

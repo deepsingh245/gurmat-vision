@@ -203,6 +203,13 @@ const AppShell: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Navigate to auth when any generator requests it
+  useEffect(() => {
+    const go = () => setPage('auth');
+    window.addEventListener('hukumnama:require-auth', go);
+    return () => window.removeEventListener('hukumnama:require-auth', go);
+  }, []);
+
   // Interstitial counter
   useEffect(() => {
     const handler = () => {

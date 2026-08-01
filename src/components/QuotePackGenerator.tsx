@@ -24,6 +24,7 @@ const QuotePackGenerator: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!topic) return;
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(CREDIT_COSTS.QUOTE_PACK)) {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.QUOTE_PACK, have: credits }));
       return;
@@ -48,6 +49,7 @@ const QuotePackGenerator: React.FC = () => {
   };
 
   const generateMedia = async (index: number, type: 'image' | 'video') => {
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     const cost = type === 'image' ? CREDIT_COSTS.IMAGE : CREDIT_COSTS.VIDEO;
     if (!canAfford(cost)) {
       setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
@@ -105,7 +107,11 @@ const QuotePackGenerator: React.FC = () => {
             className="flex-1 p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-saffron-500"
           />
           <Button onClick={handleGenerate} isLoading={loading}>
-            {t('quotes.generate', { cost: CREDIT_COSTS.QUOTE_PACK })}
+            {!user
+              ? t('generate.signInRequired')
+              : loading
+                ? '...'
+                : t('quotes.generate', { cost: CREDIT_COSTS.QUOTE_PACK })}
           </Button>
         </div>
       </div>

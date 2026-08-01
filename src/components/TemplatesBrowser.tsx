@@ -48,6 +48,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     .every(v => vars[v.key]?.trim());
 
   const handleGenerate = async () => {
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(cost)) {
       setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
       return;
@@ -206,9 +207,11 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
               disabled={!allRequiredFilled}
               className="w-full"
             >
-              {loading
-                ? (isVideo ? t('templates.generatingVideo') : t('templates.generatingImage'))
-                : t('templates.generate', { count: cost, cost })}
+              {!user
+                ? t('generate.signInRequired')
+                : loading
+                  ? (isVideo ? t('templates.generatingVideo') : t('templates.generatingImage'))
+                  : t('templates.generate', { count: cost, cost })}
             </Button>
           )}
 

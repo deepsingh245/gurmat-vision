@@ -29,6 +29,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
 
   const handleGenerateText = async () => {
     if (!hukumnama) return;
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(CREDIT_COSTS.QUOTE_CARD)) {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.QUOTE_CARD, have: credits }));
       return;
@@ -53,6 +54,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
 
   const handleGenerateImage = async () => {
     if (!generatedPost) return;
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(CREDIT_COSTS.IMAGE)) {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits }));
       return;
@@ -130,7 +132,11 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
             </div>
 
             <Button onClick={handleGenerateText} isLoading={loading} disabled={!hukumnama} className="w-full">
-              {t('post.generateText', { cost: CREDIT_COSTS.QUOTE_CARD })}
+              {!user
+                ? t('generate.signInRequired')
+                : loading
+                  ? '...'
+                  : t('post.generateText', { cost: CREDIT_COSTS.QUOTE_CARD })}
             </Button>
           </div>
         </div>

@@ -13,7 +13,7 @@ interface StatusGeneratorProps {
   hukumnama: HukumnamaData | null;
 }
 
-const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
+const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumnama: HukumnamaData | null }) => {
   const { t } = useTranslation();
   const { credits, canAfford, spend, refund } = useCredits();
   const { user } = useAuth();
@@ -28,10 +28,9 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
 
   const handleGenerate = async () => {
     if (!hukumnama && !customPrompt) return;
+    if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
     if (!canAfford(CREDIT_COSTS.IMAGE)) {
-      setError(user
-        ? t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits })
-        : t('errors.notEnoughGuestCredits'));
+      setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits }));
       return;
     }
     setLoading(true);
@@ -126,7 +125,11 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }) => {
             </div>
 
             <Button onClick={handleGenerate} isLoading={loading} className="w-full">
-              {loading ? t('status.generating') : t('status.generate', { cost: CREDIT_COSTS.IMAGE })}
+              {!user
+                ? t('generate.signInRequired')
+                : loading
+                  ? t('status.generating')
+                  : t('status.generate', { cost: CREDIT_COSTS.IMAGE })}
             </Button>
           </div>
         </div>
