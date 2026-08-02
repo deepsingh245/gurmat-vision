@@ -16,6 +16,13 @@ import {
   CREDIT_COSTS,
 } from './guards';
 export { hukumnamaGrantAdReward } from './ads';
+export {
+  hukumnamaAdminGetUsers,
+  hukumnamaAdminGetGenerations,
+  hukumnamaAdminGetRefusals,
+  hukumnamaAdminAdjustCredits,
+  hukumnamaAdminGetAdStats,
+} from './admin';
 
 admin.initializeApp();
 

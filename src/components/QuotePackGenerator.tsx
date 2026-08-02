@@ -7,6 +7,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 import Button from './Button';
 
 const QuotePackGenerator: React.FC = () => {
@@ -29,6 +30,7 @@ const QuotePackGenerator: React.FC = () => {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.QUOTE_PACK, have: credits }));
       return;
     }
+    track('generation_start', { type: 'quote-pack', credits_before: credits });
     setLoading(true);
     setError(null);
     setQuotes([]);
@@ -40,7 +42,9 @@ const QuotePackGenerator: React.FC = () => {
       spent = true;
       const data = await generateQuotePack(topic, 5);
       setQuotes(data);
+      track('generation_done', { type: 'quote-pack', success: 1, credits_used: CREDIT_COSTS.QUOTE_PACK });
     } catch (e) {
+      track('generation_done', { type: 'quote-pack', success: 0, credits_used: 0 });
       if (spent) await refund(CREDIT_COSTS.QUOTE_PACK);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateQuotes'));
     } finally {
@@ -55,6 +59,7 @@ const QuotePackGenerator: React.FC = () => {
       setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
       return;
     }
+    track('generation_start', { type: type === 'image' ? 'quote-card' : 'reel', credits_before: credits });
     setProcessingId(index);
     setError(null);
     let spent = false;
@@ -73,8 +78,10 @@ const QuotePackGenerator: React.FC = () => {
         if (user) saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
         else addGuestGeneration({ type: 'reel', prompt: quote.videoPrompt, resultUrl: url, creditsUsed: cost });
       }
+      track('generation_done', { type: type === 'image' ? 'quote-card' : 'reel', success: 1, credits_used: cost });
       window.dispatchEvent(new Event('generation-complete'));
     } catch {
+      track('generation_done', { type: type === 'image' ? 'quote-card' : 'reel', success: 0, credits_used: 0 });
       if (spent) await refund(cost);
       setError(t('errors.generateMedia', { type }));
     } finally {
@@ -155,7 +162,7 @@ const QuotePackGenerator: React.FC = () => {
                   {processingId === idx ? '...' : `🎬 Video (${CREDIT_COSTS.VIDEO}⭐)`}
                 </button>
                 <button
-                  onClick={() => navigator.clipboard.writeText(`${quote.gurmukhi}\n${quote.translation}`)}
+                  onClick={() => { navigator.clipboard.writeText(`${quote.gurmukhi}\n${quote.translation}`); track('share', { type: 'quote', platform: 'clipboard' }); }}
                   className="py-2 px-3 text-gray-500 hover:text-navy-900"
                 >
                   📋

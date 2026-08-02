@@ -4,6 +4,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/hooks/useCredits';
+import { track } from '@/firebase/analytics';
 
 const AD_DURATION = 30;
 const MAX_DAILY   = 3;
@@ -41,6 +42,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
       const result = await fn();
       await refreshUserDoc();
       setState('done');
+      track('ad_rewarded_done', { credits_granted: result.data.creditsGranted });
       onSuccess?.(result.data.creditsGranted);
       setTimeout(() => { setState('idle'); setCountdown(AD_DURATION); }, 3000);
     } catch (e: unknown) {
@@ -134,7 +136,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
 
   return (
     <button
-      onClick={() => setState('watching')}
+      onClick={() => { track('ad_rewarded_start', { ad_unit: 'rewarded' }); setState('watching'); }}
       className="w-full flex items-center justify-between bg-navy-900 hover:bg-navy-800 text-white rounded-2xl p-4 transition-colors group"
     >
       <div className="flex items-center gap-3">

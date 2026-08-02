@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
 import { generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
+import { track } from '@/firebase/analytics';
 import Button from './Button';
 
 // ─── Prompt interpolation ─────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
       setError(t('errors.notEnoughCredits', { need: cost, have: credits }));
       return;
     }
+    track('generation_start', { type: isVideo ? 'reel' : 'image', template_id: template.id, credits_before: credits });
     setLoading(true);
     setError(null);
     setResult(null);
@@ -73,8 +75,10 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         else addGuestGeneration({ type: 'image', prompt, resultUrl: url, creditsUsed: cost });
       }
       setResult(url);
+      track('generation_done', { type: isVideo ? 'reel' : 'image', success: 1, credits_used: cost });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
+      track('generation_done', { type: isVideo ? 'reel' : 'image', success: 0, credits_used: 0 });
       if (spent) await refund(cost);
       setError(e instanceof ContentRejectedError
         ? e.message
@@ -109,7 +113,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     <div className={`bg-white rounded-2xl border transition-shadow ${expanded ? 'border-saffron-300 shadow-lg' : 'border-gray-100 shadow-sm hover:shadow-md'}`}>
       <button
         className="w-full text-left p-4 flex items-start gap-3"
-        onClick={() => { setExpanded(e => !e); setResult(null); setError(null); }}
+        onClick={() => { const opening = !expanded; setExpanded(e => !e); setResult(null); setError(null); if (opening) track('template_view', { template_id: template.id, category: template.category }); }}
       >
         <span className="text-2xl mt-0.5 shrink-0">{template.emoji}</span>
         <div className="flex-1 min-w-0">

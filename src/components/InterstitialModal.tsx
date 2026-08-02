@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import BannerAd from './BannerAd';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAdEvent } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 
 interface InterstitialModalProps {
   onClose: () => void;
@@ -15,6 +16,7 @@ const InterstitialModal: React.FC<InterstitialModalProps> = ({ onClose }) => {
 
   // Log impression once
   useEffect(() => {
+    track('ad_impression', { ad_unit: 'interstitial', placement: 'studio' });
     if (user) {
       logAdEvent(user.uid, 'impression', 'interstitial').catch(() => {});
     }

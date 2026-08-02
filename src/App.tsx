@@ -11,6 +11,7 @@ import CreditsPage         from '@/pages/CreditsPage';
 import CreationsPage       from '@/pages/CreationsPage';
 import SettingsPage        from '@/pages/SettingsPage';
 import ContentPolicyPage   from '@/pages/ContentPolicyPage';
+import AdminPage           from '@/pages/AdminPage';
 
 import HukumnamaView      from '@/components/HukumnamaView';
 import StatusGenerator    from '@/components/StatusGenerator';
@@ -29,7 +30,7 @@ const INTERSTITIAL_EVERY = 5;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy' | 'auth';
+type Page = 'studio' | 'profile' | 'credits' | 'creations' | 'settings' | 'policy' | 'auth' | 'admin';
 
 // ─── User avatar button + dropdown ───────────────────────────────────────────
 
@@ -47,7 +48,10 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const isAdmin = !!import.meta.env.VITE_ADMIN_UID && userDoc?.uid === import.meta.env.VITE_ADMIN_UID;
+
   const USER_MENU_ITEMS: { page: Page; label: string; icon: string }[] = [
+    ...(isAdmin ? [{ page: 'admin' as Page, label: 'Admin', icon: '🔧' }] : []),
     { page: 'profile',   label: t('menu.profile'),    icon: '👤' },
     { page: 'credits',   label: t('menu.credits'),    icon: '⭐' },
     { page: 'creations', label: t('menu.myCreations'), icon: '🖼️' },
@@ -302,6 +306,7 @@ const AppShell: React.FC = () => {
         )}
         {page === 'settings'  && <SettingsPage      onBack={goBack} />}
         {page === 'policy'    && <ContentPolicyPage onBack={goBack} />}
+        {page === 'admin'     && <AdminPage         onBack={goBack} />}
       </main>
 
       <footer className="text-center text-gray-400 text-sm py-8">

@@ -7,6 +7,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 import Button from './Button';
 
 interface PostGeneratorProps {
@@ -34,6 +35,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.QUOTE_CARD, have: credits }));
       return;
     }
+    track('generation_start', { type: 'post-text', credits_before: credits });
     setLoading(true);
     setError(null);
     setGeneratedImage(null);
@@ -44,7 +46,9 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       const template = SOCIAL_TEMPLATES.find(tp => tp.id === selectedTemplate);
       const post = await generateSocialPost(hukumnama, template?.stylePrompt || '', language);
       setGeneratedPost(post);
+      track('generation_done', { type: 'post-text', success: 1, credits_used: CREDIT_COSTS.QUOTE_CARD });
     } catch {
+      track('generation_done', { type: 'post-text', success: 0, credits_used: 0 });
       if (spent) await refund(CREDIT_COSTS.QUOTE_CARD);
       setError(t('errors.generatePost'));
     } finally {
@@ -59,6 +63,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits }));
       return;
     }
+    track('generation_start', { type: 'poster', credits_before: credits });
     setImgLoading(true);
     setError(null);
     let spent = false;
@@ -72,8 +77,10 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       } else {
         addGuestGeneration({ type: 'poster', prompt: generatedPost.imagePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.IMAGE });
       }
+      track('generation_done', { type: 'poster', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
     } catch {
+      track('generation_done', { type: 'poster', success: 0, credits_used: 0 });
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError(t('errors.generateImage'));
     } finally {
@@ -149,7 +156,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
             <div className="text-blue-600 text-sm mb-4">{generatedPost.hashtags.join(' ')}</div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigator.clipboard.writeText(`${generatedPost.title}\n\n${generatedPost.body}\n\n${generatedPost.hashtags.join(' ')}`)} className="flex-1 text-xs">
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(`${generatedPost.title}\n\n${generatedPost.body}\n\n${generatedPost.hashtags.join(' ')}`); track('share', { type: 'post', platform: 'clipboard' }); }} className="flex-1 text-xs">
                 {t('post.copyText')}
               </Button>
               <Button variant="primary" onClick={handleGenerateImage} isLoading={imgLoading} className="flex-1 text-xs">

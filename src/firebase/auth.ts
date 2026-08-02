@@ -1,6 +1,7 @@
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  getAdditionalUserInfo,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -9,12 +10,14 @@ import {
 } from 'firebase/auth';
 import { auth } from './config';
 import { createUserDocument } from './firestore';
+import { track } from './analytics';
 
 const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async (): Promise<User> => {
   const result = await signInWithPopup(auth, googleProvider);
   await createUserDocument(result.user);
+  if (getAdditionalUserInfo(result)?.isNewUser) track('sign_up', { provider: 'google' });
   return result.user;
 };
 
@@ -26,6 +29,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 export const registerWithEmail = async (email: string, password: string): Promise<User> => {
   const result = await createUserWithEmailAndPassword(auth, email, password);
   await createUserDocument(result.user);
+  track('sign_up', { provider: 'email' });
   return result.user;
 };
 

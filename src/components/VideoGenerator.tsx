@@ -7,6 +7,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 import Button from './Button';
 
 interface VideoGeneratorProps {
@@ -33,6 +34,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.VIDEO, have: credits }));
       return;
     }
+    track('generation_start', { type: 'video', credits_before: credits });
     setLoading(true);
     setVideoUrl(null);
     setError(null);
@@ -55,8 +57,10 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         else addGuestGeneration({ type: 'video', prompt: effectivePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
       }
       setVideoUrl(url);
+      track('generation_done', { type: 'video', success: 1, credits_used: CREDIT_COSTS.VIDEO });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
+      track('generation_done', { type: 'video', success: 0, credits_used: 0 });
       if (spent) await refund(CREDIT_COSTS.VIDEO);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateVideo'));
     } finally {

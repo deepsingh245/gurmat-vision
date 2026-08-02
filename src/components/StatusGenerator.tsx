@@ -7,6 +7,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 import Button from './Button';
 
 interface StatusGeneratorProps {
@@ -33,6 +34,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
       setError(t('errors.notEnoughCredits', { need: CREDIT_COSTS.IMAGE, have: credits }));
       return;
     }
+    track('generation_start', { type: 'image', credits_before: credits });
     setLoading(true);
     setError(null);
     let spent = false;
@@ -48,8 +50,10 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
       } else {
         addGuestGeneration({ type: 'image', prompt: promptToUse, resultUrl: url, creditsUsed: CREDIT_COSTS.IMAGE });
       }
+      track('generation_done', { type: 'image', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
+      track('generation_done', { type: 'image', success: 0, credits_used: 0 });
       if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateImage'));
     } finally {

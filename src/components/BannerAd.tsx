@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAdEvent } from '@/firebase/firestore';
+import { track } from '@/firebase/analytics';
 
 interface BannerAdProps {
   slot: string;
@@ -28,6 +29,7 @@ const BannerAd: React.FC<BannerAdProps> = ({ slot, format = 'auto', className = 
     } catch {
       // AdSense not loaded yet — harmless
     }
+    track('ad_impression', { ad_unit: 'banner', placement: slot });
     if (user) {
       logAdEvent(user.uid, 'impression', 'banner').catch(() => {});
     }
