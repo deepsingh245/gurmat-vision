@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { GuestSessionProvider, useGuestSession } from '@/contexts/GuestSessionContext';
 import { fetchHukumnamaWithGemini } from '@/services/geminiService';
@@ -223,6 +225,19 @@ const AppShell: React.FC = () => {
     window.addEventListener('generation-complete', handler);
     return () => window.removeEventListener('generation-complete', handler);
   }, []);
+
+  // Android hardware back button: go to studio from any other page, exit app from studio
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener('backButton', () => {
+      if (page !== 'studio') {
+        setPage('studio');
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+    return () => { listener.then(l => l.remove()); };
+  }, [page]);
 
   if (loading) {
     return (

@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.0",
     "@google/genai": "^1.33.0",
     "firebase": "^12.15.0",
     "i18next": "^26.3.6",
@@ -17,6 +20,7 @@
     "react-i18next": "^17.0.11"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/vite": "^4.3.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",

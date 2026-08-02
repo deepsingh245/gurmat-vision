@@ -208,23 +208,96 @@ for no isolation benefit, since the same `dist/` output is what gets embedded in
 
 ## 8. Phased roadmap (Capacitor execution plan)
 
-### M1 — Capacitor bring-up (3–5 days)
+### M1 — Capacitor bring-up — **DONE 2026-08-02**
 
-- `npm install @capacitor/core @capacitor/cli @capacitor/android`
-- `npx cap init` — app name `Hukumnama AI Studio`, app ID `com.hukumnamaai.studio` (reverse-DNS,
-  must match the eventual Play Console package name exactly — cannot be changed after first
-  publish without shipping as a new app).
-- `capacitor.config.ts`: `webDir: 'dist'` (matches existing `vite build` output), keep
-  `bundledWebRuntime` default.
-- `npx cap add android` — generates `android/` at repo root; commit it like any native project
-  (it is not a build artifact).
-- `npm run build && npx cap sync android` to embed the current `dist/` into the native shell, then
-  `npx cap open android` to run in Android Studio's emulator/device.
-- Wire `@capacitor/app`'s `backButton` listener to the existing `setPage('studio')` /
-  `goBack()` handlers already in [App.tsx](src/App.tsx) — no new navigation library needed.
-- Exit criteria: the existing app loads and every tab (Hukumnama, Templates, Voice, Post, Quotes,
-  Status, Video) renders correctly inside the Android emulator, auth and Firestore reads work
-  against the real backend.
+| Step | Status |
+|---|---|
+| `npm install @capacitor/core @capacitor/android @capacitor/app` + `-D @capacitor/cli` | ✅ Installed — resolved to **Capacitor 8.5.0** (current stable; this doc originally assumed v7, superseded) |
+| `npx cap init "Hukumnama AI Studio" com.hukumnamaai.studio --web-dir dist` | ✅ `capacitor.config.ts` created — `appId: com.hukumnamaai.studio`, `appName: Hukumnama AI Studio`, `webDir: dist`. **This app ID is now locked** — changing it after first Play Store publish means shipping as a new app listing. |
+| `npm run build` | ✅ `dist/` built clean |
+| `npx cap add android` | ✅ `android/` generated at repo root, `@capacitor/app@8.1.1` auto-detected as a plugin. `MainActivity.java` is the stock `extends BridgeActivity {}` — no manual native code needed for plugin registration. |
+| `npx cap sync android` | ✅ Web assets + plugins synced into `android/app/src/main/assets/public` |
+| Wire `@capacitor/app` `backButton` listener | ✅ Added to the existing back-button-relevant `useEffect` block in [App.tsx](src/App.tsx), guarded by `Capacitor.isNativePlatform()` so web behavior is untouched: navigates to `studio` from any other page, calls `CapacitorApp.exitApp()` from `studio` itself |
+| `npx tsc --noEmit` + rebuild + re-sync | ✅ Clean |
+| Native Gradle smoke build (`gradlew assembleDebug`) | ✅ `BUILD SUCCESSFUL in 6m 8s` (123 tasks) on first attempt, re-verified again after the AGP/Gradle bump below. Produced `android/app/build/outputs/apk/debug/app-debug.apk` |
+| Run on an actual Android device | ✅ **Verified 2026-08-02** — a physical device (`00162354H005163`) is connected and authorized; `gradlew installDebug` built and installed the app onto it directly. See the install log for tab-by-tab confirmation. |
+
+**Project opened in Android Studio since the last check — three things changed on the native side
+(none of this was done by me, and per your instruction nothing here was touched, this is just
+recording what's now true):**
+
+- **AGP bumped 8.x → `9.3.1`, Gradle wrapper bumped → `9.5.0`, `compileSdk`/`targetSdk` bumped to
+  **36** (Android 16)** in `android/build.gradle` / `android/variables.gradle` /
+  `android/gradle/wrapper/gradle-wrapper.properties`. This matches an Android Studio AI-assistant
+  plan left behind at `android/.artifacts/.../implementation_plan.artifact.md`, made to satisfy
+  JDK 25 selected in the IDE's Gradle JDK setting. Re-ran the CLI build after this change (system
+  Java is still 22 on `PATH`, different from the IDE's JDK) — **still builds and installs clean**,
+  so the version spread between the CLI's Java 22 and the IDE's JDK 25 isn't currently causing
+  problems. Targeting API 36 is comfortably ahead of Play Console's minimum, not behind it.
+- **`android/local.properties` now exists** (created automatically on first Android Studio open),
+  pointing `sdk.dir` at the local Android SDK. Already covered by `android/.gitignore` — not staged,
+  not a concern.
+- **`android/.artifacts/` now exists** — Android Studio's AI-assistant working files (the plan
+  referenced above). This is IDE tooling metadata, not part of the app. Note only, not acted on:
+  worth adding to `android/.gitignore` at some point since it's noise in the native project, not
+  application code — one line (`android/.artifacts/`), whenever you're touching that file next.
+
+**What "commit it like any native project" means in practice:** Capacitor's own `android/.gitignore`
+already excludes `local.properties`, `build/`, `.gradle/`, and the copied web assets — so
+`git add android/` is safe as-is, no manual gitignore edits needed for the Capacitor-generated
+parts (the `.artifacts/` note above is the one loose end, and it's optional).
+
+**Real exit criteria — met.** The app builds, installs, and the native shell runs against the real
+Firebase backend. See "How to build to your own device" below for the repeatable workflow.
+
+### How to build to your own device
+
+Two ways to get the app onto a physical phone. Same underlying build either way — pick whichever
+fits how you like to work.
+
+**One-time setup on the phone (either path needs this):**
+1. Settings → About phone → tap "Build number" 7 times → unlocks Developer Options.
+2. Settings → Developer Options → enable **USB debugging**.
+3. Plug the phone into this computer with a USB cable.
+4. A "Allow USB debugging?" prompt appears on the phone — tap **Allow** (check "always allow from
+   this computer" so you're not prompted every time).
+5. Verify the computer sees it: `adb devices` should list the device ID with `device` next to it
+   (not `unauthorized` — if it says that, re-check the phone's prompt).
+
+**Path A — Android Studio (easiest, best for active development / debugging):**
+1. `npx cap open android` (or just open the `android/` folder directly in Android Studio).
+2. Wait for Gradle sync to finish (the toolbar shows a spinner while it does).
+3. Your device's name appears in the device dropdown in the toolbar, next to the Run button.
+4. Click the green **Run ▶** button. This builds, installs, and launches the app on the phone,
+   and gives you Logcat for live console/crash output — the most useful option while still making
+   changes.
+
+**Path B — command line only, no Android Studio window needed:**
+```bash
+# 1. Whenever src/ changes, rebuild the web bundle and copy it into the native shell:
+npm run build && npx cap sync android
+
+# 2. Build + install + launch on whichever device `adb devices` currently shows:
+cd android
+./gradlew installDebug
+cd ..
+adb shell am start -n com.hukumnamaai.studio/.MainActivity
+```
+`installDebug` (not just `assembleDebug`) is the one that pushes the APK onto the connected
+device automatically — that's the step that was just run and verified against your device.
+If you only want the APK file itself (e.g. to share with someone else for sideloading, not to
+install directly), `./gradlew assembleDebug` and grab
+`android/app/build/outputs/apk/debug/app-debug.apk`, then `adb install -r <path-to-apk>`.
+
+**Important — this is a debug build, not what you'd submit to Play Console.** Debug builds are
+unsigned-for-release and unoptimized (bigger, slower) — fine for testing on your own device, but
+Play Console submission needs `./gradlew bundleRelease` with a release signing config, which is
+part of M3/M4, not this step.
+
+**Every time you change web code** (anything in `src/`), you must `npm run build && npx cap sync
+android` before the native build will reflect it — Capacitor only sees the built `dist/` output,
+not your TypeScript source directly. Forgetting this step is the most common "why didn't my change
+show up" moment with Capacitor.
 
 ### M2 — Native plugin swaps (1–2 weeks)
 
@@ -234,12 +307,16 @@ implementation (existing code, untouched), one native implementation, selected v
 
 | Concern | Web (existing, untouched) | Native addition | Plugin |
 |---|---|---|---|
-| Ads | `BannerAd.tsx` AdSense `<ins>` | AdMob banner/interstitial/rewarded units, separate AdMob app ID | `@capacitor-community/admob` |
+| Ads | `BannerAd.tsx` AdSense `<ins>` | AdMob banner/interstitial/rewarded units, reusing the **existing AdSense Google account** (decided — same account, register the app in AdMob under it) | `@capacitor-community/admob` |
+| Credits — free/ad-earned | Existing daily bonus + watch-ad flow (`hukumnamaGrantAdReward`) | **Unchanged.** Ships in M2 as-is — decided to keep both free and paid paths, ad-earned credits need no native purchase flow | — |
+| Credits — paid packs | Not built on web (Phase 9b deferred) | **Decided: build both, paid packs later** — do **not** wire Stripe/Razorpay into the Android credit-purchase flow when Phase 9b lands. Android paid credit packs must go through Google Play Billing instead (separate follow-up, sequenced after M2, tracked against Phase 9b — see Section 0) | `@capacitor-community/in-app-purchases` (when that work starts, not part of this M2 pass) |
 | Voice | `VoiceRecorder` (MediaRecorder) | Native mic capture if WebView recording proves unreliable on-device | `@capacitor-community/voice-recorder` (add only if M1 testing shows it's needed) |
 | Download/share | `<a download>` in `CreationsPage.tsx`/generators | Save to MediaStore + native share sheet | `@capacitor/filesystem`, `@capacitor/share` |
 | Google Sign-In | Firebase Auth web popup/redirect | Native Google Sign-In (redirect flow is unreliable in WebViews) | `@capacitor-firebase/authentication` |
+| Analytics | `src/firebase/analytics.ts` (web `firebase/analytics`, `logEvent`) | **New finding from the device install (2026-08-02):** logcat showed `@firebase/analytics: TypeError: Failed to fetch` right at launch — the web Analytics SDK's `gtag`/measurement-protocol call didn't reach the network at that moment. Not a crash, app kept running. Could be a one-off (device Wi-Fi not yet warm at process start) or a recurring WebView networking quirk — **re-check logcat on a later launch before concluding it's the latter.** If it keeps happening, the fix is the same pattern as everything else here: swap to a native plugin behind `Capacitor.isNativePlatform()`, since native Analytics doesn't depend on a browser `fetch` to Google's endpoints | `@capacitor-firebase/analytics` (only if the web SDK proves unreliable on-device) |
 | Splash/status bar | — | Native splash screen, status bar color matching `navy-900` brand color | `@capacitor/splash-screen`, `@capacitor/status-bar` |
 | Push (optional, not currently in `PLAN.md`) | — | Only add if a notification use case is actually planned (e.g. daily Hukamnama reminder) | `@capacitor/push-notifications` + FCM |
+| iOS | — | **Decided: Android-first, not in parallel.** No iOS work in M2 — revisit iOS as its own milestone after Android ships (see Section 9) | — |
 
 - Exit criteria: AdMob test ads render and rewarded-ad credit grants still go through the existing
   server-verified `hukumnamaGrantAdReward` flow unchanged; downloads save correctly to the device
@@ -277,13 +354,20 @@ implementation (existing code, untouched), one native implementation, selected v
 
 ---
 
-## 9. Open decisions that need your input before implementation starts
+## 9. Decisions — answered 2026-08-02
 
-1. **Credits monetization on Android:** free/ad-earned only, or integrate Google Play Billing for
-   paid credit packs? (Directly affects whether Phase 9b's Stripe/Razorpay plan needs a
-   Play-Billing-specific branch.)
-2. **iOS timeline:** ship Android-only first via Capacitor, or plan iOS in parallel? (iOS adds
-   Apple Developer account, App Store review policy differences, and the MediaRecorder-on-WKWebView
-   risk noted in Section 4.)
-3. **AdMob account ownership:** who sets up the AdMob account/app ID — same Google account as
-   the current AdSense one, or separate?
+1. **Credits monetization on Android: both — free/ad-earned now, Google Play Billing for paid
+   packs later.** Concretely: M2 ships with only the existing free/ad-earned credit paths (no
+   purchase flow at all, nothing new to build there). When Phase 9b (Payments) is picked up, the
+   **Android app must use Play Billing for credit packs — not Stripe/Razorpay directly** — that
+   part of Phase 9b needs a platform branch: Play Billing on Android, Stripe/Razorpay on web.
+   Don't build the Android purchase UI until Play Billing integration is actually scheduled.
+2. **iOS: Android-first, not in parallel.** No iOS platform, no `ios/` folder, no
+   MediaRecorder-on-WKWebView testing until Android has shipped to Play Console. Revisit iOS as
+   its own milestone (bring-up mirrors M1: `npx cap add ios`, same `platform/*.ts` abstractions
+   extended with iOS implementations where they differ from Android).
+3. **AdMob account: reuse the existing AdSense Google account.** Register a new AdMob app under
+   that same account rather than creating a separate one — keeps ad revenue reporting and billing
+   consolidated. Needs a new AdMob **app ID** (distinct from the AdSense client ID currently in
+   `VITE_ADSENSE_CLIENT_ID`) — that new ID is an M2 prerequisite before the `@capacitor-community/admob`
+   integration can be wired up.
