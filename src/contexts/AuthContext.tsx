@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthChanged } from '@/firebase/auth';
-import { getUserDocument, grantDailyBonus } from '@/firebase/firestore';
+import { getUserDocument, createUserDocument, grantDailyBonus } from '@/firebase/firestore';
 import type { UserDocument } from '@/types';
 
 interface AuthContextValue {
@@ -33,20 +33,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthChanged(async (firebaseUser) => {
       setUser(firebaseUser);
-
-      if (firebaseUser) {
-        const doc = await getUserDocument(firebaseUser.uid);
-        setUserDoc(doc);
-        // Grant daily +2 bonus silently on app open
-        await grantDailyBonus(firebaseUser.uid);
-        // Refresh to reflect the bonus if it was granted
-        const fresh = await getUserDocument(firebaseUser.uid);
-        setUserDoc(fresh);
-      } else {
-        setUserDoc(null);
+      try {
+        if (firebaseUser) {
+          let doc = await getUserDocument(firebaseUser.uid);
+          if (!doc) {
+            // Auth session exists but no Firestore doc — create it (e.g. first run after DB reset)
+            await createUserDocument(firebaseUser);
+            doc = await getUserDocument(firebaseUser.uid);
+          }
+          setUserDoc(doc);
+          await grantDailyBonus(firebaseUser.uid);
+          const fresh = await getUserDocument(firebaseUser.uid);
+          setUserDoc(fresh);
+        } else {
+          setUserDoc(null);
+        }
+      } catch (e) {
+        console.error('Failed to load user document', e);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return unsubscribe;

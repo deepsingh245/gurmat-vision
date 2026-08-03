@@ -39,27 +39,37 @@ export const checkContentPolicy = async (prompt: string): Promise<void> => {
 
 // ─── Hukumnama ────────────────────────────────────────────────────────────────
 
+const callGetHukumnama = async (): Promise<HukumnamaData> => {
+  const fn = call<void, HukumnamaData>('hukumnamaGetHukumnama');
+  const result = await fn();
+  const d = result.data;
+  return {
+    gurmukhi: d.gurmukhi || 'Gurmukhi not found',
+    punjabi:  d.punjabi  || 'Punjabi translation not found',
+    english:  d.english  || 'English translation not found',
+    summary:  d.summary  || 'Summary not available',
+    date:     d.date     || new Date().toLocaleDateString(),
+  };
+};
+
 export const fetchHukumnamaWithGemini = async (): Promise<HukumnamaData> => {
   try {
-    const fn = call<void, HukumnamaData>('hukumnamaGetHukumnama');
-    const result = await fn();
-    const d = result.data;
-    return {
-      gurmukhi: d.gurmukhi || 'Gurmukhi not found',
-      punjabi:  d.punjabi  || 'Punjabi translation not found',
-      english:  d.english  || 'English translation not found',
-      summary:  d.summary  || 'Summary not available',
-      date:     d.date     || new Date().toLocaleDateString(),
-    };
-  } catch (e) {
-    console.error('Failed to fetch Hukumnama', e);
-    return {
-      gurmukhi: 'Unable to load Hukumnama.',
-      punjabi:  '',
-      english:  'An error occurred. Please try refreshing.',
-      summary:  'Error loading data.',
-      date:     new Date().toLocaleDateString(),
-    };
+    return await callGetHukumnama();
+  } catch {
+    // Wait 3s and retry once — covers transient network errors and cold-start latency
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      return await callGetHukumnama();
+    } catch (e) {
+      console.error('Failed to fetch Hukumnama after retry', e);
+      return {
+        gurmukhi: 'Unable to load Hukumnama.',
+        punjabi:  '',
+        english:  'An error occurred. Please try refreshing.',
+        summary:  'Error loading data.',
+        date:     new Date().toLocaleDateString(),
+      };
+    }
   }
 };
 

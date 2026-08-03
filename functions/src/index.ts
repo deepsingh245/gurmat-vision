@@ -57,6 +57,24 @@ function todayKeyIST(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 }
 
+function yesterdayKeyIST(): string {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-CA');
+}
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try { return await fn(); }
+    catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
+
 interface HukumnamaDoc {
   gurmukhi: string;
   punjabi: string;
@@ -66,26 +84,35 @@ interface HukumnamaDoc {
 }
 
 async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
-  const res = await fetch(GURBANINOW_API);
+  const res = await withRetry(() => fetch(GURBANINOW_API));
   if (!res.ok) throw new HttpsError('unavailable', 'Failed to fetch Hukamnama from source');
 
   const data = await res.json() as GurbaniNowResponse;
   if (data.error) throw new HttpsError('unavailable', 'Hukamnama source returned an error');
 
-  const gurmukhi = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
-  const punjabi  = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
-  const english  = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
+  const gurmukhi   = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
+  let   punjabi    = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
+  const english    = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
   const { month, date: day, year } = data.date.gregorian;
 
   let summary = '';
   try {
     const client = getAi();
-    const summaryRes = await client.models.generateContent({
+    const aiRes = await client.models.generateContent({
       model: MODEL.TEXT,
-      contents: `Summarize the spiritual message of this Hukamnama in exactly 2 sentences. Keep it accessible and uplifting. Text: "${english}"`,
+      contents: [
+        'You are a Gurbani scholar. Given the English translation of today\'s Hukamnama, return a JSON object with exactly two keys:',
+        '  "summary": a 2-sentence accessible and uplifting spiritual summary in English.',
+        '  "punjabi": a faithful Punjabi translation in Gurmukhi script (ਗੁਰਮੁਖੀ). Keep it reverent and close to the original meaning.',
+        `English text: "${english}"`,
+        'Respond with only the JSON object, no markdown fences.',
+      ].join('\n'),
     });
-    summary = summaryRes.text?.trim() ?? '';
-  } catch { /* non-critical — Hukamnama text still returned without summary */ }
+    const raw = aiRes.text?.trim() ?? '';
+    const parsed = JSON.parse(raw.replace(/^```json|```$/g, '').trim()) as { summary?: string; punjabi?: string };
+    if (parsed.summary) summary = parsed.summary;
+    if (parsed.punjabi && !punjabi) punjabi = parsed.punjabi;
+  } catch { /* non-critical — Hukamnama text still returned without AI enrichment */ }
 
   const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
   try {
@@ -155,10 +182,20 @@ export const hukumnamaModerateContent = onCall(
 export const hukumnamaGetHukumnama = onCall(
   { secrets: [geminiKey] },
   async (_request) => {
+    const db = admin.firestore();
     const dateKey = todayKeyIST();
-    const cached = await admin.firestore().collection('hukamnama').doc(dateKey).get();
+    const cached = await db.collection('hukamnama').doc(dateKey).get();
     if (cached.exists) return cached.data() as HukumnamaDoc;
-    return fetchAndCacheHukamnama(dateKey);
+
+    // Live fetch with internal retries (withRetry wraps the external API call)
+    try {
+      return await fetchAndCacheHukamnama(dateKey);
+    } catch {
+      // All retries exhausted — serve yesterday's doc rather than a hard error
+      const prev = await db.collection('hukamnama').doc(yesterdayKeyIST()).get();
+      if (prev.exists) return prev.data() as HukumnamaDoc;
+      throw new HttpsError('unavailable', 'Hukamnama is temporarily unavailable. Please try again later.');
+    }
   }
 );
 
