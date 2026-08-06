@@ -13,7 +13,7 @@ function requireAdmin(uid: string | undefined): void {
 // ─── Get users ─────────────────────────────────────────────────────────────────
 
 export const hukumnamaAdminGetUsers = onCall(
-  { secrets: [adminUid] },
+  { secrets: [adminUid], cors: true },
   async (request) => {
     requireAdmin(request.auth?.uid);
     const { emailSearch, limit: lim = 50 } = request.data as {
@@ -38,7 +38,7 @@ export const hukumnamaAdminGetUsers = onCall(
 // ─── Get generations ───────────────────────────────────────────────────────────
 
 export const hukumnamaAdminGetGenerations = onCall(
-  { secrets: [adminUid] },
+  { secrets: [adminUid], cors: true },
   async (request) => {
     requireAdmin(request.auth?.uid);
     const { type, userId, limit: lim = 50 } = request.data as {
@@ -62,7 +62,7 @@ export const hukumnamaAdminGetGenerations = onCall(
 // ─── Get moderation queue ──────────────────────────────────────────────────────
 
 export const hukumnamaAdminGetRefusals = onCall(
-  { secrets: [adminUid] },
+  { secrets: [adminUid], cors: true },
   async (request) => {
     requireAdmin(request.auth?.uid);
     const { limit: lim = 30 } = request.data as { limit?: number };
@@ -79,7 +79,7 @@ export const hukumnamaAdminGetRefusals = onCall(
 // ─── Adjust credits ────────────────────────────────────────────────────────────
 
 export const hukumnamaAdminAdjustCredits = onCall(
-  { secrets: [adminUid] },
+  { secrets: [adminUid], cors: true },
   async (request) => {
     requireAdmin(request.auth?.uid);
     const { uid, delta, reason } = request.data as {
@@ -120,7 +120,7 @@ export const hukumnamaAdminAdjustCredits = onCall(
 // ─── Ad stats ──────────────────────────────────────────────────────────────────
 
 export const hukumnamaAdminGetAdStats = onCall(
-  { secrets: [adminUid] },
+  { secrets: [adminUid], cors: true },
   async (request) => {
     requireAdmin(request.auth?.uid);
     const { days = 30 } = request.data as { days?: number };

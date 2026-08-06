@@ -12,7 +12,7 @@ import Button from './Button';
 
 const QuotePackGenerator: React.FC = () => {
   const { t } = useTranslation();
-  const { credits, canAfford, spend, refund } = useCredits();
+  const { credits, canAfford, refresh } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -35,20 +35,17 @@ const QuotePackGenerator: React.FC = () => {
     setError(null);
     setQuotes([]);
     setMediaUrls({});
-    let spent = false;
     try {
       await checkContentPolicy(topic);
-      await spend(CREDIT_COSTS.QUOTE_PACK);
-      spent = true;
       const data = await generateQuotePack(topic, 5);
       setQuotes(data);
       track('generation_done', { type: 'quote-pack', success: 1, credits_used: CREDIT_COSTS.QUOTE_PACK });
     } catch (e) {
       track('generation_done', { type: 'quote-pack', success: 0, credits_used: 0 });
-      if (spent) await refund(CREDIT_COSTS.QUOTE_PACK);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateQuotes'));
     } finally {
       setLoading(false);
+      await refresh();
     }
   };
 
@@ -62,30 +59,25 @@ const QuotePackGenerator: React.FC = () => {
     track('generation_start', { type: type === 'image' ? 'quote-card' : 'reel', credits_before: credits });
     setProcessingId(index);
     setError(null);
-    let spent = false;
     try {
-      await spend(cost);
-      spent = true;
       const quote = quotes[index];
       if (type === 'image') {
         const url = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url } }));
-        if (user) saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
-        else addGuestGeneration({ type: 'quote-card', prompt: quote.imagePrompt, resultUrl: url, creditsUsed: cost });
+        saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
       } else {
         const url = await generateBackgroundVideo(quote.videoPrompt, '9:16');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], vid: url } }));
-        if (user) saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
-        else addGuestGeneration({ type: 'reel', prompt: quote.videoPrompt, resultUrl: url, creditsUsed: cost });
+        saveGeneration(user.uid, 'reel', quote.videoPrompt, url, cost).catch(() => {});
       }
       track('generation_done', { type: type === 'image' ? 'quote-card' : 'reel', success: 1, credits_used: cost });
       window.dispatchEvent(new Event('generation-complete'));
     } catch {
       track('generation_done', { type: type === 'image' ? 'quote-card' : 'reel', success: 0, credits_used: 0 });
-      if (spent) await refund(cost);
       setError(t('errors.generateMedia', { type }));
     } finally {
       setProcessingId(null);
+      await refresh();
     }
   };
 
@@ -104,7 +96,7 @@ const QuotePackGenerator: React.FC = () => {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={topic}
@@ -113,7 +105,7 @@ const QuotePackGenerator: React.FC = () => {
             placeholder={t('quotes.topicPlaceholder')}
             className="flex-1 p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-saffron-500"
           />
-          <Button onClick={handleGenerate} isLoading={loading}>
+          <Button onClick={handleGenerate} isLoading={loading} className="shrink-0">
             {!user
               ? t('generate.signInRequired')
               : loading

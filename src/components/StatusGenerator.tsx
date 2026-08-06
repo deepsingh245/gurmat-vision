@@ -16,7 +16,7 @@ interface StatusGeneratorProps {
 
 const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumnama: HukumnamaData | null }) => {
   const { t } = useTranslation();
-  const { credits, canAfford, spend, refund } = useCredits();
+  const { credits, canAfford, refresh } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -37,27 +37,20 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
     track('generation_start', { type: 'image', credits_before: credits });
     setLoading(true);
     setError(null);
-    let spent = false;
     try {
       const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
       await checkContentPolicy(promptToUse);
-      await spend(CREDIT_COSTS.IMAGE);
-      spent = true;
       const url = await generateStatusImage(promptToUse, size, '9:16');
       setImageUrl(url);
-      if (user) {
-        saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
-      } else {
-        addGuestGeneration({ type: 'image', prompt: promptToUse, resultUrl: url, creditsUsed: CREDIT_COSTS.IMAGE });
-      }
+      saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
       track('generation_done', { type: 'image', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       track('generation_done', { type: 'image', success: 0, credits_used: 0 });
-      if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateImage'));
     } finally {
       setLoading(false);
+      await refresh();
     }
   };
 

@@ -16,7 +16,7 @@ interface VideoGeneratorProps {
 
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
   const { t } = useTranslation();
-  const { credits, canAfford, spend, refund } = useCredits();
+  const { credits, canAfford, refresh } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -38,33 +38,28 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
     setLoading(true);
     setVideoUrl(null);
     setError(null);
-    let spent = false;
     try {
       const effectivePrompt = mode === 'text-to-video'
         ? (customPrompt || DEFAULT_VIDEO_PROMPT_TEMPLATE(hukumnama?.summary || 'Spiritual ambiance'))
         : (customPrompt || 'Animate this peacefully');
       await checkContentPolicy(effectivePrompt);
-      await spend(CREDIT_COSTS.VIDEO);
-      spent = true;
       let url = '';
       if (mode === 'text-to-video') {
         url = await generateBackgroundVideo(effectivePrompt, '9:16');
-        if (user) saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
-        else addGuestGeneration({ type: 'video', prompt: effectivePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
+        saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       } else if (mode === 'image-to-video' && uploadedImage) {
         url = await generateVideoFromImage(uploadedImage, effectivePrompt, '9:16');
-        if (user) saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
-        else addGuestGeneration({ type: 'video', prompt: effectivePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.VIDEO });
+        saveGeneration(user.uid, 'video', effectivePrompt, url, CREDIT_COSTS.VIDEO).catch(() => {});
       }
       setVideoUrl(url);
       track('generation_done', { type: 'video', success: 1, credits_used: CREDIT_COSTS.VIDEO });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       track('generation_done', { type: 'video', success: 0, credits_used: 0 });
-      if (spent) await refund(CREDIT_COSTS.VIDEO);
       setError(e instanceof ContentRejectedError ? e.message : t('errors.generateVideo'));
     } finally {
       setLoading(false);
+      await refresh();
     }
   };
 

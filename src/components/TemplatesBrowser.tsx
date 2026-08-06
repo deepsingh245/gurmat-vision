@@ -25,7 +25,7 @@ type CategoryFilter = 'all' | TemplateCategory;
 
 const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => {
   const { t } = useTranslation();
-  const { credits, canAfford, spend, refund } = useCredits();
+  const { credits, canAfford, refresh } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -58,34 +58,29 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     setLoading(true);
     setError(null);
     setResult(null);
-    let spent = false;
     try {
       const prompt = interpolate(template.promptTemplate, vars);
       await checkContentPolicy(prompt);
-      await spend(cost);
-      spent = true;
       let url: string;
       if (isVideo) {
         url = await generateBackgroundVideo(prompt, '9:16');
-        if (user) saveGeneration(user.uid, 'reel', prompt, url, cost).catch(() => {});
-        else addGuestGeneration({ type: 'reel', prompt, resultUrl: url, creditsUsed: cost });
+        saveGeneration(user.uid, 'reel', prompt, url, cost).catch(() => {});
       } else {
         url = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16');
-        if (user) saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
-        else addGuestGeneration({ type: 'image', prompt, resultUrl: url, creditsUsed: cost });
+        saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
       }
       setResult(url);
       track('generation_done', { type: isVideo ? 'reel' : 'image', success: 1, credits_used: cost });
       window.dispatchEvent(new Event('generation-complete'));
     } catch (e) {
       track('generation_done', { type: isVideo ? 'reel' : 'image', success: 0, credits_used: 0 });
-      if (spent) await refund(cost);
       setError(e instanceof ContentRejectedError
         ? e.message
         : isVideo ? t('errors.generateVideo') : t('errors.generateImage'));
       console.error(e);
     } finally {
       setLoading(false);
+      await refresh();
     }
   };
 

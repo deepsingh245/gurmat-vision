@@ -16,7 +16,7 @@ interface PostGeneratorProps {
 
 const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
   const { t } = useTranslation();
-  const { credits, canAfford, spend, refund } = useCredits();
+  const { credits, canAfford, refresh } = useCredits();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -39,20 +39,17 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     setLoading(true);
     setError(null);
     setGeneratedImage(null);
-    let spent = false;
     try {
-      await spend(CREDIT_COSTS.QUOTE_CARD);
-      spent = true;
       const template = SOCIAL_TEMPLATES.find(tp => tp.id === selectedTemplate);
       const post = await generateSocialPost(hukumnama, template?.stylePrompt || '', language);
       setGeneratedPost(post);
       track('generation_done', { type: 'post-text', success: 1, credits_used: CREDIT_COSTS.QUOTE_CARD });
     } catch {
       track('generation_done', { type: 'post-text', success: 0, credits_used: 0 });
-      if (spent) await refund(CREDIT_COSTS.QUOTE_CARD);
       setError(t('errors.generatePost'));
     } finally {
       setLoading(false);
+      await refresh();
     }
   };
 
@@ -66,25 +63,18 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     track('generation_start', { type: 'poster', credits_before: credits });
     setImgLoading(true);
     setError(null);
-    let spent = false;
     try {
-      await spend(CREDIT_COSTS.IMAGE);
-      spent = true;
       const url = await generateStatusImage(generatedPost.imagePrompt, '1K', '1:1');
       setGeneratedImage(url);
-      if (user) {
-        saveGeneration(user.uid, 'poster', generatedPost.imagePrompt, url, CREDIT_COSTS.IMAGE).catch(() => {});
-      } else {
-        addGuestGeneration({ type: 'poster', prompt: generatedPost.imagePrompt, resultUrl: url, creditsUsed: CREDIT_COSTS.IMAGE });
-      }
+      saveGeneration(user.uid, 'poster', generatedPost.imagePrompt, url, CREDIT_COSTS.IMAGE).catch(() => {});
       track('generation_done', { type: 'poster', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
     } catch {
       track('generation_done', { type: 'poster', success: 0, credits_used: 0 });
-      if (spent) await refund(CREDIT_COSTS.IMAGE);
       setError(t('errors.generateImage'));
     } finally {
       setImgLoading(false);
+      await refresh();
     }
   };
 

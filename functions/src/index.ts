@@ -166,7 +166,7 @@ async function uploadToStorage(
 interface ModerateRequest { prompt: string }
 
 export const hukumnamaModerateContent = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (request) => {
     const uid = request.auth?.uid ?? 'guest';
     const { prompt } = request.data as ModerateRequest;
@@ -180,7 +180,7 @@ export const hukumnamaModerateContent = onCall(
 // ─── getHukumnama — reads from Firestore cache, falls back to live fetch ──────
 
 export const hukumnamaGetHukumnama = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (_request) => {
     const db = admin.firestore();
     const dateKey = todayKeyIST();
@@ -217,7 +217,7 @@ interface GenerateImageRequest {
 }
 
 export const hukumnamaGenerateImage = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (request) => {
     const uid = request.auth?.uid ?? 'guest';
     const { prompt, size = '1K', aspectRatio = '9:16' } = request.data as GenerateImageRequest;
@@ -385,7 +385,7 @@ interface GeneratePostRequest {
 }
 
 export const hukumnamaGeneratePost = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (request) => {
     const uid = request.auth?.uid ?? 'guest';
     const { hukumnama, stylePrompt, language } = request.data as GeneratePostRequest;
@@ -435,7 +435,7 @@ interface GenerateQuotePackRequest {
 }
 
 export const hukumnamaGenerateQuotePack = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (request) => {
     const uid = request.auth?.uid ?? 'guest';
     const { topic, count = 5 } = request.data as GenerateQuotePackRequest;
@@ -481,7 +481,7 @@ interface ProcessVoiceRequest {
 }
 
 export const hukumnamaProcessVoice = onCall(
-  { secrets: [geminiKey] },
+  { secrets: [geminiKey], cors: true },
   async (request) => {
     const uid = request.auth?.uid ?? 'guest';
     const { audioBase64, mimeType } = request.data as ProcessVoiceRequest;

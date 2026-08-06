@@ -7,6 +7,7 @@ interface UseCreditsReturn {
   canAfford: (cost: number) => boolean;
   spend: (cost: number) => Promise<void>;
   refund: (cost: number) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export const useCredits = (): UseCreditsReturn => {
@@ -35,5 +36,7 @@ export const useCredits = (): UseCreditsReturn => {
     await refreshUserDoc();
   };
 
-  return { credits, canAfford, spend, refund };
+  const refresh = async () => { if (user) await refreshUserDoc(); };
+
+  return { credits, canAfford, spend, refund, refresh };
 };
