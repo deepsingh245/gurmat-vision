@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Image, Star, Palette } from 'lucide-react';
 import { generateStatusImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
@@ -70,9 +71,9 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="text-2xl">🖼️</span> {t('status.heading')}
+              <Image className="w-5 h-5" /> {t('status.heading')}
             </h3>
-            <span className="text-xs text-gray-400">⭐ {credits} credits</span>
+            <span className="text-xs text-gray-400 inline-flex items-center gap-1"><Star className="w-3 h-3" /> {credits} credits</span>
           </div>
 
           {error && (
@@ -158,7 +159,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
           </div>
         ) : (
           <div className="text-center text-gray-400">
-            <p className="text-4xl mb-2">🎨</p>
+            <Palette className="w-10 h-10 mx-auto mb-2" />
             <p>{t('status.emptyMessage')}</p>
           </div>
         )}

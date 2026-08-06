@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Leaf, Star, Palette, Clapperboard, Copy } from 'lucide-react';
 import { generateQuotePack, generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
@@ -84,10 +85,10 @@ const QuotePackGenerator: React.FC = () => {
   return (
     <div className="animate-fade-in-up space-y-8">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center max-w-2xl mx-auto">
-        <h3 className="text-xl font-bold text-gray-800 mb-2">🌿 {t('quotes.heading')}</h3>
+        <h3 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2"><Leaf className="w-5 h-5" /> {t('quotes.heading')}</h3>
         <p className="text-gray-500 mb-1 text-sm">{t('quotes.subheading')}</p>
-        <p className="text-xs text-gray-400 mb-4">
-          Pack: {CREDIT_COSTS.QUOTE_PACK} credit · Image: {CREDIT_COSTS.IMAGE} credit · Video: {CREDIT_COSTS.VIDEO} credits &nbsp;|&nbsp; ⭐ {credits} available
+        <p className="text-xs text-gray-400 mb-4 inline-flex items-center gap-1">
+          Pack: {CREDIT_COSTS.QUOTE_PACK} credit · Image: {CREDIT_COSTS.IMAGE} credit · Video: {CREDIT_COSTS.VIDEO} credits &nbsp;|&nbsp; <Star className="w-3 h-3" /> {credits} available
         </p>
 
         {error && (
@@ -142,22 +143,22 @@ const QuotePackGenerator: React.FC = () => {
                 <button
                   onClick={() => generateMedia(idx, 'image')}
                   disabled={!!processingId}
-                  className="flex-1 py-2 bg-white border border-gray-200 rounded hover:bg-gray-100 text-xs font-semibold text-gray-700 disabled:opacity-50"
+                  className="flex-1 py-2 bg-white border border-gray-200 rounded hover:bg-gray-100 text-xs font-semibold text-gray-700 disabled:opacity-50 flex items-center justify-center gap-1"
                 >
-                  {processingId === idx ? '...' : `🎨 Image (${CREDIT_COSTS.IMAGE}⭐)`}
+                  {processingId === idx ? '...' : <><Palette className="w-3.5 h-3.5" /> Image ({CREDIT_COSTS.IMAGE}<Star className="w-3 h-3 inline" />)</>}
                 </button>
                 <button
                   onClick={() => generateMedia(idx, 'video')}
                   disabled={!!processingId}
-                  className="flex-1 py-2 bg-white border border-gray-200 rounded hover:bg-gray-100 text-xs font-semibold text-gray-700 disabled:opacity-50"
+                  className="flex-1 py-2 bg-white border border-gray-200 rounded hover:bg-gray-100 text-xs font-semibold text-gray-700 disabled:opacity-50 flex items-center justify-center gap-1"
                 >
-                  {processingId === idx ? '...' : `🎬 Video (${CREDIT_COSTS.VIDEO}⭐)`}
+                  {processingId === idx ? '...' : <><Clapperboard className="w-3.5 h-3.5" /> Video ({CREDIT_COSTS.VIDEO}<Star className="w-3 h-3 inline" />)</>}
                 </button>
                 <button
                   onClick={() => { navigator.clipboard.writeText(`${quote.gurmukhi}\n${quote.translation}`); track('share', { type: 'quote', platform: 'clipboard' }); }}
                   className="py-2 px-3 text-gray-500 hover:text-navy-900"
                 >
-                  📋
+                  <Copy className="w-4 h-4" />
                 </button>
               </div>
             </div>

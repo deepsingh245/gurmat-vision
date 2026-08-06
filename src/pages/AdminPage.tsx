@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { httpsCallable } from 'firebase/functions';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Wrench, ArrowLeft, ExternalLink, CheckCircle2,
+  Trophy, Star, Newspaper, MonitorPlay,
+  Users, Palette, Shield, BarChart3,
+} from 'lucide-react';
 import { functions } from '@/firebase/config';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -348,7 +354,7 @@ const GenerationsTab: React.FC = () => {
                         rel="noopener noreferrer"
                         className="text-xs text-blue-600 hover:underline font-medium"
                       >
-                        View ↗
+                        View <ExternalLink className="inline w-3 h-3" />
                       </a>
                     )}
                   </td>
@@ -411,7 +417,7 @@ const ModerationTab: React.FC = () => {
           {rows.length === 0 ? (
             <tr>
               <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
-                No refusals yet ✅
+                <span className="inline-flex items-center gap-1.5">No refusals yet <CheckCircle2 className="w-4 h-4 text-green-500" /></span>
               </td>
             </tr>
           ) : rows.map(r => (
@@ -466,21 +472,21 @@ const AdStatsTab: React.FC = () => {
   if (error)   return <p className="text-sm text-red-600">{error}</p>;
   if (!stats)  return null;
 
-  const STAT_CARDS = [
-    { label: 'Rewarded Completions', value: stats.rewardedCompletions, icon: '🏆', color: 'text-green-600 bg-green-50' },
-    { label: 'Credits via Ads',      value: stats.creditsGranted,       icon: '⭐', color: 'text-saffron-600 bg-saffron-50' },
-    { label: 'Banner Impressions',   value: stats.bannerImpressions,    icon: '📰', color: 'text-blue-600 bg-blue-50' },
-    { label: 'Interstitial Views',   value: stats.interstitialImpressions, icon: '📺', color: 'text-purple-600 bg-purple-50' },
+  const STAT_CARDS: { label: string; value: number; icon: LucideIcon; color: string }[] = [
+    { label: 'Rewarded Completions', value: stats.rewardedCompletions, icon: Trophy, color: 'text-green-600 bg-green-50' },
+    { label: 'Credits via Ads',      value: stats.creditsGranted,       icon: Star, color: 'text-saffron-600 bg-saffron-50' },
+    { label: 'Banner Impressions',   value: stats.bannerImpressions,    icon: Newspaper, color: 'text-blue-600 bg-blue-50' },
+    { label: 'Interstitial Views',   value: stats.interstitialImpressions, icon: MonitorPlay, color: 'text-purple-600 bg-purple-50' },
   ];
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-400">Last 30 days</p>
       <div className="grid sm:grid-cols-2 gap-4">
-        {STAT_CARDS.map(({ label, value, icon, color }) => (
+        {STAT_CARDS.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className={`rounded-xl p-5 border border-gray-100 ${color.split(' ')[1]}`}>
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{icon}</span>
+              <Icon className="w-6 h-6" />
               <div>
                 <p className={`text-2xl font-bold ${color.split(' ')[0]}`}>{value.toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{label}</p>
@@ -495,11 +501,11 @@ const AdStatsTab: React.FC = () => {
 
 // ─── Main AdminPage ───────────────────────────────────────────────────────────
 
-const TABS: { id: AdminTab; label: string; icon: string }[] = [
-  { id: 'users',       label: 'Users',       icon: '👥' },
-  { id: 'generations', label: 'Generations', icon: '🎨' },
-  { id: 'moderation',  label: 'Moderation',  icon: '🛡️' },
-  { id: 'adstats',     label: 'Ad Stats',    icon: '📊' },
+const TABS: { id: AdminTab; label: string; icon: LucideIcon }[] = [
+  { id: 'users',       label: 'Users',       icon: Users },
+  { id: 'generations', label: 'Generations', icon: Palette },
+  { id: 'moderation',  label: 'Moderation',  icon: Shield },
+  { id: 'adstats',     label: 'Ad Stats',    icon: BarChart3 },
 ];
 
 const AdminPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -512,9 +518,9 @@ const AdminPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           onClick={onBack}
           className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
         >
-          ← Back
+          <ArrowLeft className="w-4 h-4" /> Back
         </button>
-        <h2 className="text-2xl font-bold text-gray-900">🔧 Admin Dashboard</h2>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Wrench className="w-5 h-5" /> Admin Dashboard</h2>
       </div>
 
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
@@ -528,7 +534,7 @@ const AdminPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <span>{t.icon}</span> {t.label}
+            <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}
       </div>

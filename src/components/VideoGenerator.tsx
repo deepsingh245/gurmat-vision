@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Video, Star, Clapperboard } from 'lucide-react';
 import { generateBackgroundVideo, generateVideoFromImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_VIDEO_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
@@ -73,9 +74,9 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="text-2xl">🎥</span> {t('video.heading')}
+              <Video className="w-5 h-5" /> {t('video.heading')}
             </h3>
-            <span className="text-xs text-gray-400">⭐ {credits} credits</span>
+            <span className="text-xs text-gray-400 inline-flex items-center gap-1"><Star className="w-3 h-3" /> {credits} credits</span>
           </div>
 
           <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg">
@@ -163,7 +164,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ hukumnama }) => {
           </div>
         ) : (
           <div className="text-center text-gray-400">
-            <p className="text-4xl mb-2">🎬</p>
+            <Clapperboard className="w-10 h-10 mx-auto mb-2" />
             <p>{t('video.emptyMessage')}</p>
           </div>
         )}

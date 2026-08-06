@@ -1,14 +1,16 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
+import { Handshake, Ban, CheckCircle2, Shield, HandHeart, Mail, Check, X } from 'lucide-react';
 
 interface ContentPolicyPageProps {
   onBack: () => void;
 }
 
-const Section: React.FC<{ title: string; emoji: string; children: React.ReactNode }> = ({ title, emoji, children }) => (
+const Section: React.FC<{ title: string; icon: LucideIcon; children: React.ReactNode }> = ({ title, icon: Icon, children }) => (
   <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
     <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-      <span>{emoji}</span> {title}
+      <Icon className="w-5 h-5" /> {title}
     </h2>
     {children}
   </section>
@@ -16,8 +18,8 @@ const Section: React.FC<{ title: string; emoji: string; children: React.ReactNod
 
 const Rule: React.FC<{ allowed: boolean; children: React.ReactNode }> = ({ allowed, children }) => (
   <li className="flex items-start gap-3 py-2">
-    <span className={`mt-0.5 text-sm font-bold shrink-0 ${allowed ? 'text-green-500' : 'text-red-500'}`}>
-      {allowed ? '✓' : '✕'}
+    <span className={`mt-0.5 shrink-0 ${allowed ? 'text-green-500' : 'text-red-500'}`}>
+      {allowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
     </span>
     <span className="text-sm text-gray-700">{children}</span>
   </li>
@@ -41,7 +43,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </p>
       </div>
 
-      <Section title={t('policy.commitment')} emoji="🤝">
+      <Section title={t('policy.commitment')} icon={Handshake}>
         <p className="text-sm text-gray-600 leading-relaxed">
           We believe AI can be a powerful tool for spreading the message of Gurbani — but only when used
           with the same reverence a Sikh brings to the Gurdwara. This policy defines what we will and
@@ -53,7 +55,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </p>
       </Section>
 
-      <Section title={t('policy.whatNotGenerate')} emoji="🚫">
+      <Section title={t('policy.whatNotGenerate')} icon={Ban}>
         <p className="text-xs text-gray-500 mb-3">These are hard rules. No override, no exception.</p>
         <ul className="space-y-1 divide-y divide-gray-50">
           <Rule allowed={false}>
@@ -80,7 +82,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </ul>
       </Section>
 
-      <Section title={t('policy.whatSupport')} emoji="✅">
+      <Section title={t('policy.whatSupport')} icon={CheckCircle2}>
         <ul className="space-y-1 divide-y divide-gray-50">
           <Rule allowed={true}>Spiritual backgrounds for Hukumnama and Gurbani quote cards</Rule>
           <Rule allowed={true}>Abstract Khanda, Nishan Sahib, and Ik Onkar artwork (non-figurative)</Rule>
@@ -92,7 +94,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </ul>
       </Section>
 
-      <Section title={t('policy.howSafety')} emoji="🛡️">
+      <Section title={t('policy.howSafety')} icon={Shield}>
         <ol className="space-y-3 text-sm text-gray-600">
           <li className="flex gap-3">
             <span className="font-bold text-navy-900 shrink-0">1.</span>
@@ -113,7 +115,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </ol>
       </Section>
 
-      <Section title={t('policy.tenGurus')} emoji="🙏">
+      <Section title={t('policy.tenGurus')} icon={HandHeart}>
         <p className="text-sm text-gray-600 leading-relaxed">
           The Ten Sikh Gurus are held in the highest reverence. Hukumnama AI Studio will never generate
           images purporting to depict their faces, bodies, or physical appearance — regardless of the
@@ -128,7 +130,7 @@ const ContentPolicyPage: React.FC<ContentPolicyPageProps> = ({ onBack }) => {
         </p>
       </Section>
 
-      <Section title={t('policy.reporting')} emoji="📬">
+      <Section title={t('policy.reporting')} icon={Mail}>
         <p className="text-sm text-gray-600 leading-relaxed">
           If you see content generated through our platform that you believe violates this policy,
           or if our safety system rejected a legitimate prompt you believe should be allowed,

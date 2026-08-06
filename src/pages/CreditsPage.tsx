@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
+import { Palette, Leaf, Clapperboard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { grantDailyBonus } from '@/firebase/firestore';
@@ -11,10 +13,10 @@ interface CreditsPageProps {
   onSignIn?: () => void;
 }
 
-const GENERATION_COSTS = [
-  { typeKey: 'creations.typeImage',     cost: 1,  icon: '🎨' },
-  { typeKey: 'creations.typeQuoteCard', cost: 1,  icon: '🌿' },
-  { typeKey: 'creations.typeVideo',     cost: 10, icon: '🎬' },
+const GENERATION_COSTS: { typeKey: string; cost: number; icon: LucideIcon }[] = [
+  { typeKey: 'creations.typeImage',     cost: 1,  icon: Palette },
+  { typeKey: 'creations.typeQuoteCard', cost: 1,  icon: Leaf },
+  { typeKey: 'creations.typeVideo',     cost: 10, icon: Clapperboard },
 ];
 
 const CostTable: React.FC = () => {
@@ -23,10 +25,10 @@ const CostTable: React.FC = () => {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <h3 className="font-bold text-gray-800 mb-4">{t('credits.costsTitle')}</h3>
       <div className="space-y-3">
-        {GENERATION_COSTS.map(({ typeKey, cost, icon }) => (
+        {GENERATION_COSTS.map(({ typeKey, cost, icon: Icon }) => (
           <div key={typeKey} className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-700">
-              <span>{icon}</span>
+              <Icon className="w-4 h-4" />
               <span>{t(typeKey)}</span>
             </div>
             <span className="text-sm font-semibold text-gray-900">

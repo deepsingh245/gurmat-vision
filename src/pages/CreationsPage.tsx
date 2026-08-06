@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import type { LucideIcon } from 'lucide-react';
+import { Image, Leaf, PenLine, Clapperboard, Video, X, Download, Eye, Trash2, File, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { getUserGenerations, softDeleteGeneration } from '@/firebase/firestore';
@@ -20,12 +22,12 @@ const TYPE_COLOR: Record<GenerationType, string> = {
   reel:         'bg-pink-50 text-pink-700',
 };
 
-const TYPE_EMOJI: Record<GenerationType, string> = {
-  image:        '🖼️',
-  'quote-card': '🌿',
-  poster:       '✍️',
-  video:        '🎬',
-  reel:         '🎥',
+const TYPE_ICON: Record<GenerationType, LucideIcon> = {
+  image:        Image,
+  'quote-card': Leaf,
+  poster:       PenLine,
+  video:        Clapperboard,
+  reel:         Video,
 };
 
 const isVideoType = (type: GenerationType) => type === 'video' || type === 'reel';
@@ -87,10 +89,10 @@ const MediaLightbox: React.FC<{ item: Generation; onClose: () => void }> = ({ it
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white text-xl transition-colors"
+        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
         aria-label="Close"
       >
-        ✕
+        <X className="w-5 h-5" />
       </button>
 
       {/* Media */}
@@ -119,7 +121,7 @@ const MediaLightbox: React.FC<{ item: Generation; onClose: () => void }> = ({ it
             onClick={() => downloadFile(item.resultUrl, filename)}
             className="shrink-0 flex items-center gap-2 px-4 py-2 bg-saffron-500 hover:bg-saffron-600 text-white rounded-lg text-sm font-semibold transition-colors"
           >
-            ⬇️ {t('creations.save')}
+            <Download className="w-4 h-4" /> {t('creations.save')}
           </button>
         </div>
       </div>
@@ -138,7 +140,7 @@ interface CardProps {
 const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
   const { t } = useTranslation();
   const color = TYPE_COLOR[item.type] ?? 'bg-gray-50 text-gray-700';
-  const emoji = TYPE_EMOJI[item.type] ?? '📄';
+  const TypeIcon = TYPE_ICON[item.type] ?? File;
   const typeKey = `creations.type${item.type.charAt(0).toUpperCase() + item.type.slice(1).replace('-c', 'C')}` as const;
   const isVideo = isVideoType(item.type);
   const ext = isVideo ? 'mp4' : 'png';
@@ -194,8 +196,8 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
           />
         )}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-          <span className="bg-white/90 text-gray-900 rounded-full px-3 py-1.5 text-xs font-semibold shadow-lg">
-            🔍 View
+          <span className="bg-white/90 text-gray-900 rounded-full px-3 py-1.5 text-xs font-semibold shadow-lg flex items-center gap-1">
+            <Eye className="w-3.5 h-3.5" /> View
           </span>
         </div>
       </div>
@@ -203,10 +205,10 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
       {/* Info row */}
       <div className="p-3 flex-1 flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>
-            {emoji} {typeLabel}
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${color}`}>
+            <TypeIcon className="w-3 h-3" /> {typeLabel}
           </span>
-          <span className="text-xs text-gray-400">⭐ {item.creditsUsed}</span>
+          <span className="text-xs text-gray-400 inline-flex items-center gap-1"><Star className="w-3 h-3" /> {item.creditsUsed}</span>
         </div>
         <p className="text-xs text-gray-500 line-clamp-2 flex-1">{item.prompt}</p>
 
@@ -239,7 +241,7 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
               className="text-xs py-1.5 px-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded"
               title="Delete"
             >
-              🗑️
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
@@ -313,7 +315,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
 
         {visible.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-4xl mb-4">🌿</p>
+            <Leaf className="w-10 h-10 mx-auto mb-4 text-gray-300" />
             <p className="font-semibold text-gray-700 mb-2">{t('creations.guestEmpty')}</p>
             <p className="text-sm text-gray-400 max-w-xs mx-auto mb-4">
               {t('creations.guestEmptyDesc')}
@@ -420,7 +422,7 @@ const CreationsPage: React.FC<CreationsPageProps> = ({ onBack }) => {
         </div>
       ) : visible.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-4xl mb-4">🌿</p>
+          <Leaf className="w-10 h-10 mx-auto mb-4 text-gray-300" />
           <p className="font-semibold text-gray-700 mb-2">
             {items.length === 0 ? t('creations.authEmpty') : t('creations.authEmptyFilter')}
           </p>

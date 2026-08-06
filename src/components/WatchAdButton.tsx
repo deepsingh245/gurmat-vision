@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Sparkle, CheckCircle2, Play, ArrowRight } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,7 +78,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
           <div className="absolute top-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded">
             {t('watchAd.adCountdown', { seconds: countdown })}
           </div>
-          <p className="text-4xl mb-3">🌟</p>
+          <Sparkle className="w-9 h-9 mb-3 text-saffron-300" />
           <p className="text-lg font-bold">{t('watchAd.adTitle')}</p>
           <p className="text-saffron-300 text-sm mt-1">{t('watchAd.adSubtitle')}</p>
           <p className="text-white/50 text-xs mt-4">
@@ -111,7 +112,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
   if (state === 'done') {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        <p className="text-3xl mb-2">✅</p>
+        <CheckCircle2 className="w-8 h-8 mb-2 mx-auto text-green-500" />
         <p className="text-green-700 font-bold">{t('watchAd.success')}</p>
         <p className="text-green-600 text-sm mt-1">
           {t('watchAd.successBalance', { credits })}
@@ -140,8 +141,8 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
       className="w-full flex items-center justify-between bg-navy-900 hover:bg-navy-800 text-white rounded-2xl p-4 transition-colors group"
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-saffron-500 rounded-full flex items-center justify-center text-navy-900 text-lg shrink-0">
-          ▶
+        <div className="w-10 h-10 bg-saffron-500 rounded-full flex items-center justify-center text-navy-900 shrink-0">
+          <Play className="w-4 h-4" fill="currentColor" />
         </div>
         <div className="text-left">
           <p className="font-bold text-sm">{t('watchAd.watchBtn')}</p>
@@ -150,7 +151,7 @@ const WatchAdButton: React.FC<WatchAdButtonProps> = ({ onSuccess }) => {
           </p>
         </div>
       </div>
-      <span className="text-saffron-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
+      <ArrowRight className="w-5 h-5 text-saffron-400 group-hover:translate-x-1 transition-transform" />
     </button>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { Megaphone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAdEvent } from '@/firebase/firestore';
 import { track } from '@/firebase/analytics';
@@ -38,7 +39,7 @@ const BannerAd: React.FC<BannerAdProps> = ({ slot, format = 'auto', className = 
   if (!clientId) {
     return (
       <div className={`flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl py-4 text-gray-300 text-xs gap-2 ${className}`}>
-        <span>📢</span>
+        <Megaphone className="w-4 h-4" />
         <span>Ad — set <code className="font-mono text-gray-400">VITE_ADSENSE_CLIENT_ID</code> to activate</span>
       </div>
     );

@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 export interface HukumnamaData {
   gurmukhi: string;
   punjabi: string;
@@ -109,7 +111,8 @@ export interface ContentTemplate {
   variables?: TemplateVariable[];
   aspectRatio?: '1:1' | '9:16' | '16:9';
   tags: string[];
-  emoji: string;
+  /** A lucide-react icon component, or a literal sacred-glyph string (e.g. Ik Onkar, Khanda) rendered as-is. */
+  icon: LucideIcon | string;
 }
 
 // ─── Voice ────────────────────────────────────────────────────────────────────

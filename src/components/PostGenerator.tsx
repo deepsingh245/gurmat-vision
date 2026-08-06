@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PenLine, Star, Download, FileText } from 'lucide-react';
 import { HukumnamaData, GeneratedPost } from '@/types';
 import { SOCIAL_TEMPLATES, CREDIT_COSTS } from '@/constants';
 import { generateSocialPost, generateStatusImage } from '@/services/geminiService';
@@ -83,8 +84,8 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800">✍️ {t('post.heading')}</h3>
-            <span className="text-xs text-gray-400">⭐ {credits} credits</span>
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><PenLine className="w-5 h-5" /> {t('post.heading')}</h3>
+            <span className="text-xs text-gray-400 inline-flex items-center gap-1"><Star className="w-3 h-3" /> {credits} credits</span>
           </div>
 
           {error && (
@@ -169,12 +170,12 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
               </div>
             )}
             <a href={generatedImage} download="post-image.png" className="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow text-gray-900 hover:bg-white">
-              ⬇️
+              <Download className="w-4 h-4" />
             </a>
           </div>
         ) : (
           <div className="text-center text-gray-400 p-8">
-            <p className="text-4xl mb-2">📝</p>
+            <FileText className="w-10 h-10 mx-auto mb-2" />
             <p>{t('post.emptyMessage')}</p>
           </div>
         )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import BannerAd from './BannerAd';
 import { useAuth } from '@/contexts/AuthContext';
 import { logAdEvent } from '@/firebase/firestore';
@@ -48,10 +49,10 @@ const InterstitialModal: React.FC<InterstitialModalProps> = ({ onClose }) => {
           ) : (
             <button
               onClick={onClose}
-              className="text-white/80 hover:text-white text-xl leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              className="text-white/80 hover:text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
               aria-label="Close ad"
             >
-              ×
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>

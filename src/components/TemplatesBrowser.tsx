@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Sparkles, Sparkle, ChevronDown, Search } from 'lucide-react';
 import { TEMPLATES, CATEGORY_META } from '@/constants/templates';
 import type { ContentTemplate, TemplateCategory } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
@@ -110,7 +111,11 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         className="w-full text-left p-4 flex items-start gap-3"
         onClick={() => { const opening = !expanded; setExpanded(e => !e); setResult(null); setError(null); if (opening) track('template_view', { template_id: template.id, category: template.category }); }}
       >
-        <span className="text-2xl mt-0.5 shrink-0">{template.emoji}</span>
+        <span className="mt-0.5 shrink-0">
+          {typeof template.icon === 'string'
+            ? <span className="text-2xl">{template.icon}</span>
+            : <template.icon className="w-6 h-6 text-saffron-600" />}
+        </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-gray-900 text-sm">
@@ -132,7 +137,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
             ))}
           </div>
         </div>
-        <span className={`text-gray-400 text-xs mt-1 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 mt-1 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
       {expanded && (
@@ -232,12 +237,12 @@ const TemplatesBrowser: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
   const [search, setSearch] = useState('');
 
-  const ALL_FILTERS: { id: CategoryFilter; label: string; emoji: string }[] = [
-    { id: 'all', label: t('templates.filterAll'), emoji: '🌟' },
+  const ALL_FILTERS: { id: CategoryFilter; label: string; icon: typeof Sparkle | string }[] = [
+    { id: 'all', label: t('templates.filterAll'), icon: Sparkle },
     ...Object.entries(CATEGORY_META).map(([id, meta]) => ({
       id: id as TemplateCategory,
       label: t(`templateCategories.${id}`, { defaultValue: meta.label }),
-      emoji: meta.emoji,
+      icon: meta.icon,
     })),
   ];
 
@@ -252,7 +257,7 @@ const TemplatesBrowser: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold text-gray-900 mb-1">✨ {t('templates.heading')}</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2"><Sparkles className="w-5 h-5" /> {t('templates.heading')}</h3>
         <p className="text-sm text-gray-500 mb-4">
           {t('templates.subheading', { count: TEMPLATES.length })}
         </p>
@@ -276,7 +281,7 @@ const TemplatesBrowser: React.FC = () => {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <span>{f.emoji}</span> {f.label}
+              {typeof f.icon === 'string' ? <span>{f.icon}</span> : <f.icon className="w-3.5 h-3.5" />} {f.label}
             </button>
           ))}
         </div>
@@ -290,7 +295,7 @@ const TemplatesBrowser: React.FC = () => {
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <p className="text-3xl mb-3">🔍</p>
+          <Search className="w-8 h-8 mx-auto mb-3 text-gray-300" />
           <p className="text-gray-500 font-medium">{t('templates.noMatch')}</p>
           <button
             onClick={() => { setSearch(''); setActiveCategory('all'); }}

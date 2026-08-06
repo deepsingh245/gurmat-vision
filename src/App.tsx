@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Wrench, User, Star, Image, Settings, ChevronDown,
+  ScrollText, Sparkles, Mic, PenLine, Leaf, Video,
+} from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -52,12 +57,12 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
 
   const isAdmin = !!import.meta.env.VITE_ADMIN_UID && userDoc?.uid === import.meta.env.VITE_ADMIN_UID;
 
-  const USER_MENU_ITEMS: { page: Page; label: string; icon: string }[] = [
-    ...(isAdmin ? [{ page: 'admin' as Page, label: 'Admin', icon: '🔧' }] : []),
-    { page: 'profile',   label: t('menu.profile'),    icon: '👤' },
-    { page: 'credits',   label: t('menu.credits'),    icon: '⭐' },
-    { page: 'creations', label: t('menu.myCreations'), icon: '🖼️' },
-    { page: 'settings',  label: t('menu.settings'),   icon: '⚙️' },
+  const USER_MENU_ITEMS: { page: Page; label: string; icon: LucideIcon }[] = [
+    ...(isAdmin ? [{ page: 'admin' as Page, label: 'Admin', icon: Wrench }] : []),
+    { page: 'profile',   label: t('menu.profile'),    icon: User },
+    { page: 'credits',   label: t('menu.credits'),    icon: Star },
+    { page: 'creations', label: t('menu.myCreations'), icon: Image },
+    { page: 'settings',  label: t('menu.settings'),   icon: Settings },
   ];
 
   const initials = (userDoc?.name || '?')
@@ -79,7 +84,7 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
         <span className="text-white text-sm font-medium hidden sm:block max-w-25 truncate">
           {userDoc?.name || t('menu.profile')}
         </span>
-        <span className="text-white/70 text-xs">▾</span>
+        <ChevronDown className="w-3.5 h-3.5 text-white/70" />
       </button>
 
       {open && (
@@ -89,13 +94,13 @@ const UserMenu: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }
             <p className="text-xs text-gray-400 truncate">{userDoc?.email}</p>
             <p className="text-xs text-saffron-600 font-semibold mt-0.5">{userDoc?.credits ?? 0} credits</p>
           </div>
-          {USER_MENU_ITEMS.map(({ page, label, icon }) => (
+          {USER_MENU_ITEMS.map(({ page, label, icon: Icon }) => (
             <button
               key={page}
               onClick={() => { onNavigate(page); setOpen(false); }}
               className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
             >
-              <span>{icon}</span> {label}
+              <Icon className="w-4 h-4" /> {label}
             </button>
           ))}
         </div>
@@ -115,7 +120,7 @@ const GuestHeader: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigat
         className="flex items-center justify-center w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
         title={t('menu.myCreations')}
       >
-        <span className="text-sm">🖼️</span>
+        <Image className="w-4 h-4" />
       </button>
       <button
         onClick={() => onNavigate('auth')}
@@ -136,13 +141,13 @@ const Studio: React.FC = () => {
   const [loading, setLoading]     = useState(true);
 
   const STUDIO_TABS = [
-    { id: 'hukumnama', label: t('tabs.hukumnama'), icon: '📜' },
-    { id: 'templates', label: t('tabs.templates'), icon: '✨' },
-    { id: 'voice',     label: t('tabs.voice'),     icon: '🎙️' },
-    { id: 'post',      label: t('tabs.posts'),     icon: '✍️' },
-    { id: 'quotes',    label: t('tabs.quotes'),    icon: '🌿' },
-    { id: 'status',    label: t('tabs.status'),    icon: '🖼️' },
-    { id: 'video',     label: t('tabs.video'),     icon: '🎥' },
+    { id: 'hukumnama', label: t('tabs.hukumnama'), icon: ScrollText },
+    { id: 'templates', label: t('tabs.templates'), icon: Sparkles },
+    { id: 'voice',     label: t('tabs.voice'),     icon: Mic },
+    { id: 'post',      label: t('tabs.posts'),     icon: PenLine },
+    { id: 'quotes',    label: t('tabs.quotes'),    icon: Leaf },
+    { id: 'status',    label: t('tabs.status'),    icon: Image },
+    { id: 'video',     label: t('tabs.video'),     icon: Video },
   ];
 
   useEffect(() => {
@@ -165,15 +170,15 @@ const Studio: React.FC = () => {
             {!loading && (
               <div className="mt-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('post')}>
-                  <h3 className="font-bold text-blue-900 mb-1">📝 {t('quickActions.writePost')}</h3>
+                  <h3 className="font-bold text-blue-900 mb-1 flex items-center gap-1.5"><PenLine className="w-4 h-4" /> {t('quickActions.writePost')}</h3>
                   <p className="text-xs text-blue-700">{t('quickActions.writePostDesc')}</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('video')}>
-                  <h3 className="font-bold text-purple-900 mb-1">🎥 {t('quickActions.createVideo')}</h3>
+                  <h3 className="font-bold text-purple-900 mb-1 flex items-center gap-1.5"><Video className="w-4 h-4" /> {t('quickActions.createVideo')}</h3>
                   <p className="text-xs text-purple-700">{t('quickActions.createVideoDesc')}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('quotes')}>
-                  <h3 className="font-bold text-green-900 mb-1">🌿 {t('quickActions.getQuotes')}</h3>
+                  <h3 className="font-bold text-green-900 mb-1 flex items-center gap-1.5"><Leaf className="w-4 h-4" /> {t('quickActions.getQuotes')}</h3>
                   <p className="text-xs text-green-700">{t('quickActions.getQuotesDesc')}</p>
                 </div>
               </div>
@@ -286,7 +291,7 @@ const AppShell: React.FC = () => {
               className="flex items-center gap-1 bg-saffron-500/20 hover:bg-saffron-500/30 rounded-full px-3 py-1 transition-colors"
               title={t('menu.credits')}
             >
-              <span className="text-saffron-300 text-xs">⭐</span>
+              <Star className="w-3.5 h-3.5 text-saffron-300" fill="currentColor" />
               <span className="text-white text-xs font-bold">{displayCredits}</span>
             </button>
             <LanguageSwitcher />

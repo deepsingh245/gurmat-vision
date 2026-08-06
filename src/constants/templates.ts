@@ -1,3 +1,8 @@
+import {
+  ScrollText, Flower2, Sunrise, Orbit, Waves, Shield,
+  Sparkles, Swords, Wheat, Target, Flame, Flag, Mountain,
+  HandHeart, Heart, Zap, Palette, PartyPopper, Clapperboard, Leaf, Moon,
+} from 'lucide-react';
 import type { ContentTemplate } from '@/types';
 import { CREDIT_COSTS } from './index';
 
@@ -27,7 +32,7 @@ export const TEMPLATES: ContentTemplate[] = [
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '📜',
+    icon: ScrollText,
     tags: ['hukumnama', 'daily', 'portrait'],
     promptTemplate: `
 A glowing golden-hour background for a Sikh daily Hukumnama card.
@@ -45,7 +50,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🌸',
+    icon: Flower2,
     tags: ['verse', 'quote', 'portrait'],
     variables: [
       {
@@ -79,7 +84,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🌅',
+    icon: Sunrise,
     tags: ['ardas', 'morning', 'prayer'],
     promptTemplate: `
 Serene sunrise over a Gurdwara landscape. First light of dawn, misty golden sky,
@@ -97,7 +102,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '🔵',
+    icon: Orbit,
     tags: ['sukhmani', 'peace', 'square'],
     promptTemplate: `
 Deep celestial blue and silver cosmic scene representing divine peace (sukh).
@@ -115,7 +120,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '🕉️',
+    icon: Waves,
     tags: ['simran', 'naam', 'meditation'],
     promptTemplate: `
 Abstract spiritual painting representing the vibration of Waheguru Naam.
@@ -133,7 +138,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🛡️',
+    icon: Shield,
     tags: ['chaupai', 'protection', 'strength'],
     promptTemplate: `
 Powerful golden shield of divine light, Khanda symbol (without human form) formed from glowing energy,
@@ -153,7 +158,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '✨',
+    icon: Sparkles,
     tags: ['guru nanak', 'gurpurab', 'poster'],
     variables: [
       {
@@ -181,7 +186,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '⚔️',
+    icon: Swords,
     tags: ['guru gobind singh', 'gurpurab', 'khalsa'],
     variables: [
       {
@@ -209,7 +214,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🌾',
+    icon: Wheat,
     tags: ['vaisakhi', 'khalsa', 'harvest', 'festival'],
     promptTemplate: `
 Vibrant Vaisakhi celebration background. Golden wheat fields, Nishan Sahib (blue flag) waving,
@@ -227,7 +232,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🏹',
+    icon: Target,
     tags: ['hola mohalla', 'anandpur', 'sikh martial arts'],
     promptTemplate: `
 Dynamic Hola Mohalla festival background. Colourful powder (gulal) in saffron and blue,
@@ -245,7 +250,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🪔',
+    icon: Flame,
     tags: ['bandi chhorr', 'diwali', 'lanterns', 'freedom'],
     promptTemplate: `
 Hundreds of glowing diyas (oil lamps) floating on the sarovar water around Golden Temple at night.
@@ -265,7 +270,8 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '☬',
+    // Sacred symbol — rendered verbatim, not swapped for a generic icon.
+    icon: '☬',
     tags: ['khanda', 'khalsa', 'symbol', 'art'],
     variables: [
       {
@@ -292,7 +298,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🏳️',
+    icon: Flag,
     tags: ['nishan sahib', 'flag', 'khalsa'],
     promptTemplate: `
 Majestic Nishan Sahib (Sikh flag) in blue silk flying against a dramatic sky,
@@ -310,7 +316,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🌄',
+    icon: Mountain,
     tags: ['chardi kala', 'optimism', 'khalsa spirit'],
     promptTemplate: `
 Powerful sunrise over mountains, eagle soaring upward toward the sun,
@@ -329,7 +335,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '🤲',
+    icon: HandHeart,
     tags: ['seva', 'langar', 'community', 'service'],
     promptTemplate: `
 Warm, glowing scene of hands offering food — representing Langar (free community kitchen).
@@ -347,7 +353,8 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: 'ੴ',
+    // Sacred symbol — rendered verbatim, not swapped for a generic icon.
+    icon: 'ੴ',
     tags: ['ik onkar', 'one god', 'sacred', 'art'],
     variables: [
       {
@@ -376,7 +383,7 @@ ${SAFE_SUFFIX}
     mediaType: 'video',
     creditCost: CREDIT_COSTS.VIDEO,
     aspectRatio: '9:16',
-    emoji: '✨',
+    icon: Sparkles,
     tags: ['reel', 'quote', 'animation', 'vertical'],
     variables: [
       {
@@ -403,7 +410,7 @@ ${VIDEO_SUFFIX}
     mediaType: 'video',
     creditCost: CREDIT_COSTS.VIDEO,
     aspectRatio: '9:16',
-    emoji: '🌅',
+    icon: Sunrise,
     tags: ['golden temple', 'dawn', 'reel', 'vertical'],
     promptTemplate: `
 Breathtaking cinematic timelapse of dawn over Sri Harmandir Sahib (Golden Temple).
@@ -421,7 +428,7 @@ ${VIDEO_SUFFIX}
     mediaType: 'video',
     creditCost: CREDIT_COSTS.VIDEO,
     aspectRatio: '9:16',
-    emoji: '🌿',
+    icon: Leaf,
     tags: ['nature', 'meditation', 'reel', 'creation'],
     variables: [
       {
@@ -448,7 +455,7 @@ ${VIDEO_SUFFIX}
     mediaType: 'video',
     creditCost: CREDIT_COSTS.VIDEO,
     aspectRatio: '9:16',
-    emoji: '⚔️',
+    icon: Swords,
     tags: ['khalsa', 'reel', 'celebration', 'energy'],
     promptTemplate: `
 Dynamic slow-motion cinematic video: Nishan Sahib flag waving powerfully in wind,
@@ -466,7 +473,7 @@ ${VIDEO_SUFFIX}
     mediaType: 'video',
     creditCost: CREDIT_COSTS.VIDEO,
     aspectRatio: '9:16',
-    emoji: '🙏',
+    icon: HandHeart,
     tags: ['langar', 'seva', 'reel', 'community'],
     promptTemplate: `
 Warm cinematic video: steam rising from a large pot, golden candlelight, hands in prayer,
@@ -486,7 +493,7 @@ ${VIDEO_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🌙',
+    icon: Moon,
     tags: ['evening', 'simran', 'reflection', 'dusk'],
     promptTemplate: `
 Peaceful dusk landscape: crescent moon rising over a Gurdwara silhouette,
@@ -504,7 +511,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '🙏',
+    icon: Heart,
     tags: ['gratitude', 'shukar', 'thanksgiving'],
     promptTemplate: `
 Warm golden light pouring through clouds, hands open upward receiving divine blessings,
@@ -522,7 +529,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '💪',
+    icon: Zap,
     tags: ['courage', 'strength', 'motivation'],
     variables: [
       {
@@ -549,7 +556,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '1:1',
-    emoji: '☮️',
+    icon: Waves,
     tags: ['peace', 'shanti', 'calm', 'blue'],
     promptTemplate: `
 Calm lake reflecting moonlight, white lotus flowers blooming, soft mist on water.
@@ -567,7 +574,7 @@ ${SAFE_SUFFIX}
     mediaType: 'image',
     creditCost: CREDIT_COSTS.IMAGE,
     aspectRatio: '9:16',
-    emoji: '🎨',
+    icon: Palette,
     tags: ['custom', 'creative', 'freeform'],
     variables: [
       {
@@ -597,10 +604,11 @@ ${SAFE_SUFFIX}
 
 export type TemplateCategory = import('@/types').TemplateCategory;
 
-export const CATEGORY_META: Record<TemplateCategory, { label: string; emoji: string; description: string }> = {
-  gurbani:     { label: 'Gurbani',      emoji: '📜', description: 'Quote cards, verse backgrounds, prayer cards' },
-  gurpurab:    { label: 'Gurpurab',     emoji: '🎉', description: 'Festival posters for Sikh holy days' },
-  khalsa:      { label: 'Khalsa',       emoji: '☬',  description: 'Khalsa symbols, artwork, and heritage' },
-  reel:        { label: 'Reels',        emoji: '🎬', description: '9:16 video backgrounds for Instagram & YouTube' },
-  inspiration: { label: 'Inspiration',  emoji: '✨', description: 'Daily motivation, gratitude, and peace cards' },
+export const CATEGORY_META: Record<TemplateCategory, { label: string; icon: typeof ScrollText | string; description: string }> = {
+  gurbani:     { label: 'Gurbani',      icon: ScrollText,   description: 'Quote cards, verse backgrounds, prayer cards' },
+  gurpurab:    { label: 'Gurpurab',     icon: PartyPopper,  description: 'Festival posters for Sikh holy days' },
+  // Sacred symbol — rendered verbatim, not swapped for a generic icon.
+  khalsa:      { label: 'Khalsa',       icon: '☬',          description: 'Khalsa symbols, artwork, and heritage' },
+  reel:        { label: 'Reels',        icon: Clapperboard, description: '9:16 video backgrounds for Instagram & YouTube' },
+  inspiration: { label: 'Inspiration',  icon: Sparkles,     description: 'Daily motivation, gratitude, and peace cards' },
 };
