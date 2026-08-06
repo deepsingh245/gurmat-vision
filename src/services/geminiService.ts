@@ -79,10 +79,10 @@ export const generateStatusImage = async (
   prompt: string,
   size: '1K' | '2K' | '4K' = '1K',
   aspectRatio: string = '9:16'
-): Promise<string> => {
-  const fn = call<object, { url: string }>('hukumnamaGenerateImage');
+): Promise<{ url: string; dataUri: string }> => {
+  const fn = call<object, { url: string; dataUri: string }>('hukumnamaGenerateImage');
   const result = await fn({ prompt, size, aspectRatio });
-  return result.data.url;
+  return { url: result.data.url, dataUri: result.data.dataUri };
 };
 
 // ─── Video ────────────────────────────────────────────────────────────────────

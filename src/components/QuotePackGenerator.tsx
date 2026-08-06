@@ -63,7 +63,7 @@ const QuotePackGenerator: React.FC = () => {
     try {
       const quote = quotes[index];
       if (type === 'image') {
-        const url = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
+        const { url } = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
         setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url } }));
         saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
       } else {

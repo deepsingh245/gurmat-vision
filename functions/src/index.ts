@@ -250,7 +250,7 @@ export const hukumnamaGenerateImage = onCall(
           const filePath = `generated-images/${uid}/${Date.now()}.${ext}`;
           const url = await uploadToStorage(buffer, filePath, mimeType);
           await logSpend(uid, 'generateImage', CREDIT_COSTS.IMAGE);
-          return { url };
+          return { url, dataUri: `data:${mimeType};base64,${part.inlineData.data}` };
         }
       }
       throw new HttpsError('internal', 'No image data returned by Imagen');

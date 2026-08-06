@@ -26,6 +26,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
   const [loading, setLoading]                   = useState(false);
   const [generatedPost, setGeneratedPost]       = useState<GeneratedPost | null>(null);
   const [generatedImage, setGeneratedImage]     = useState<string | null>(null);
+  const [generatedImageData, setGeneratedImageData] = useState<string | null>(null);
   const [imgLoading, setImgLoading]             = useState(false);
   const [error, setError]                       = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     setLoading(true);
     setError(null);
     setGeneratedImage(null);
+    setGeneratedImageData(null);
     try {
       const template = SOCIAL_TEMPLATES.find(tp => tp.id === selectedTemplate);
       const post = await generateSocialPost(hukumnama, template?.stylePrompt || '', language);
@@ -54,6 +56,91 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     }
   };
 
+  const handleDownloadComposite = async () => {
+    if (!generatedImageData || !generatedPost) return;
+    try {
+      const img = new Image();
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = generatedImageData; });
+
+      const size = Math.max(img.naturalWidth, img.naturalHeight) || 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.drawImage(img, 0, 0, size, size);
+
+      // dark overlay
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
+      ctx.fillRect(0, 0, size, size);
+
+      const pad = size * 0.1;
+      const maxW = size - pad * 2;
+      const cx = size / 2;
+
+      function wrapText(text: string, fontSize: number): string[] {
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        const words = text.split(' ');
+        const lines: string[] = [];
+        let line = '';
+        for (const word of words) {
+          const test = line ? `${line} ${word}` : word;
+          if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+          else line = test;
+        }
+        if (line) lines.push(line);
+        return lines;
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#ffffff';
+
+      const titleSz = Math.round(size * 0.055);
+      const bodySz  = Math.round(size * 0.033);
+      const titleLines = wrapText(generatedPost.title, titleSz);
+      ctx.font = `${bodySz}px sans-serif`;
+      const bodyLines  = generatedPost.body.split(' ').reduce<string[]>((acc, word) => {
+        const last = acc[acc.length - 1] ?? '';
+        const test = last ? `${last} ${word}` : word;
+        if (ctx.measureText(test).width > maxW && last) return [...acc, word];
+        return [...acc.slice(0, -1), test];
+      }, ['']).slice(0, 6);
+
+      const titleLH = titleSz * 1.35;
+      const bodyLH  = bodySz  * 1.6;
+      const gap     = size * 0.03;
+      const totalH  = titleLines.length * titleLH + gap + bodyLines.length * bodyLH;
+      let y = (size - totalH) / 2;
+
+      ctx.font = `bold ${titleSz}px sans-serif`;
+      for (const line of titleLines) { ctx.fillText(line, cx, y); y += titleLH; }
+
+      y += gap;
+      ctx.font = `${bodySz}px sans-serif`;
+      for (const line of bodyLines) { ctx.fillText(line, cx, y); y += bodyLH; }
+
+      // watermark
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.font = `${Math.round(size * 0.025)}px sans-serif`;
+      ctx.fillText(t('post.watermark'), cx, size - pad * 0.8);
+
+      canvas.toBlob(blob => {
+        if (!blob) { window.open(generatedImage, '_blank'); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'post-image.png';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+      }, 'image/png');
+    } catch {
+      window.open(generatedImage ?? '', '_blank');
+    }
+  };
+
   const handleGenerateImage = async () => {
     if (!generatedPost) return;
     if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }
@@ -65,8 +152,9 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
     setImgLoading(true);
     setError(null);
     try {
-      const url = await generateStatusImage(generatedPost.imagePrompt, '1K', '1:1');
+      const { url, dataUri } = await generateStatusImage(generatedPost.imagePrompt, '1K', '1:1');
       setGeneratedImage(url);
+      setGeneratedImageData(dataUri);
       saveGeneration(user.uid, 'poster', generatedPost.imagePrompt, url, CREDIT_COSTS.IMAGE).catch(() => {});
       track('generation_done', { type: 'poster', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
@@ -169,9 +257,9 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
                 <div className="absolute bottom-4 text-xs opacity-75">{t('post.watermark')}</div>
               </div>
             )}
-            <a href={generatedImage} download="post-image.png" className="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow text-gray-900 hover:bg-white">
+            <button onClick={handleDownloadComposite} className="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow text-gray-900 hover:bg-white">
               <Download className="w-4 h-4" />
-            </a>
+            </button>
           </div>
         ) : (
           <div className="text-center text-gray-400 p-8">

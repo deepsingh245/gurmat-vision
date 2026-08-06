@@ -41,7 +41,7 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
     try {
       const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
       await checkContentPolicy(promptToUse);
-      const url = await generateStatusImage(promptToUse, size, '9:16');
+      const { url } = await generateStatusImage(promptToUse, size, '9:16');
       setImageUrl(url);
       saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
       track('generation_done', { type: 'image', success: 1, credits_used: CREDIT_COSTS.IMAGE });

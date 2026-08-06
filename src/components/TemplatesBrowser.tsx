@@ -80,7 +80,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         url = await generateBackgroundVideo(prompt, '9:16');
         saveGeneration(user.uid, 'reel', prompt, url, cost).catch(() => {});
       } else {
-        url = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16');
+        ({ url } = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16'));
         saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
       }
       setResult(url);
