@@ -96,7 +96,7 @@
     "typePoster": "Poster",
     "typeVideo": "Video",
     "typeReel": "Reel",
-    "save": "⬇️ Save",
+    "save": "Save",
     "confirmDelete": "Yes, delete",
     "cancel": "Cancel",
     "guestEmpty": "No creations yet this session",
@@ -209,7 +209,7 @@
     "generatingImage": "Generating image…",
     "generate_one": "Generate — {{cost}} credit",
     "generate_other": "Generate — {{cost}} credits",
-    "download": "⬇️ Download",
+    "download": "Download",
     "redo": "↺ Redo",
     "videoNote": "⏳ Video generation takes 1–2 minutes. Please wait after clicking."
   },

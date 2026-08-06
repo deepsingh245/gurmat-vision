@@ -232,9 +232,9 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
           <div className="flex gap-1.5">
             <button
               onClick={() => downloadFile(item.resultUrl, filename)}
-              className="flex-1 text-xs py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600"
+              className="flex-1 text-xs py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600 flex items-center justify-center gap-1"
             >
-              {t('creations.save')}
+              <Download className="w-3.5 h-3.5" /> {t('creations.save')}
             </button>
             <button
               onClick={() => setConfirmDelete(true)}

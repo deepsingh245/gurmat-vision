@@ -1,5 +1,6 @@
 import { HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // Mirror of src/constants/index.ts — cannot import across package boundaries
 export const CREDIT_COSTS = {
@@ -93,7 +94,7 @@ export async function spendCredits(uid: string, cost: number): Promise<void> {
     const snap = await tx.get(userRef);
     const credits: number = snap.data()?.credits ?? 0;
     if (credits < cost) throw new HttpsError('resource-exhausted', 'Not enough credits.');
-    tx.update(userRef, { credits: admin.firestore.FieldValue.increment(-cost) });
+    tx.update(userRef, { credits: FieldValue.increment(-cost) });
   });
 }
 
@@ -101,7 +102,7 @@ export async function spendCredits(uid: string, cost: number): Promise<void> {
 export async function refundCredits(uid: string, cost: number): Promise<void> {
   try {
     await admin.firestore().collection('users').doc(uid)
-      .update({ credits: admin.firestore.FieldValue.increment(cost) });
+      .update({ credits: FieldValue.increment(cost) });
   } catch { /* non-critical */ }
 }
 
@@ -110,7 +111,7 @@ export async function logSpend(uid: string, action: string, cost: number): Promi
   try {
     await admin.firestore().collection('spendLog').add({
       uid, action, creditsSpent: cost,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
   } catch { /* non-critical */ }
 }

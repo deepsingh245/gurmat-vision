@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Sparkle, ChevronDown, Search } from 'lucide-react';
+import { Sparkles, Sparkle, ChevronDown, Search, X, Download } from 'lucide-react';
 import { TEMPLATES, CATEGORY_META } from '@/constants/templates';
 import type { ContentTemplate, TemplateCategory } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
@@ -38,9 +38,22 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     });
     return defaults;
   });
-  const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<string | null>(null);
-  const [error, setError]     = useState<string | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [result, setResult]           = useState<string | null>(null);
+  const [error, setError]             = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const overlayRef                    = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxOpen]);
 
   const cost    = template.creditCost;
   const isVideo = template.mediaType === 'video';
@@ -182,11 +195,20 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
 
           {result && (
             <div className="rounded-xl overflow-hidden border border-gray-100">
-              {isVideo ? (
-                <video src={result} controls autoPlay loop className="w-full max-h-64 object-cover bg-black" />
-              ) : (
-                <img src={result} alt="Generated" className="w-full max-h-64 object-cover" />
-              )}
+              <button
+                className="w-full relative group cursor-zoom-in"
+                onClick={() => setLightboxOpen(true)}
+                aria-label="View full size"
+              >
+                {isVideo ? (
+                  <video src={result} autoPlay loop muted className="w-full max-h-64 object-cover bg-black pointer-events-none" />
+                ) : (
+                  <img src={result} alt="Generated" className="w-full max-h-64 object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <span className="opacity-0 group-hover:opacity-100 bg-black/60 text-white text-xs px-3 py-1 rounded-full transition-opacity">View full</span>
+                </div>
+              </button>
               <div className="p-2 bg-gray-50 flex gap-2">
                 <button
                   onClick={handleDownload}
@@ -200,6 +222,45 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
                 >
                   {t('templates.redo')}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {lightboxOpen && result && (
+            <div
+              ref={overlayRef}
+              className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+              onClick={e => { if (e.target === overlayRef.current) setLightboxOpen(false); }}
+            >
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="max-w-2xl w-full flex flex-col gap-4">
+                <div className="rounded-2xl overflow-hidden shadow-2xl bg-black">
+                  {isVideo ? (
+                    <video src={result} controls autoPlay className="w-full max-h-[75vh] object-contain" />
+                  ) : (
+                    <img src={result} alt="Generated" className="w-full max-h-[75vh] object-contain" />
+                  )}
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-2 px-5 py-2 bg-saffron-500 hover:bg-saffron-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <Download className="w-4 h-4" /> {t('templates.download')}
+                  </button>
+                  <button
+                    onClick={() => setLightboxOpen(false)}
+                    className="flex items-center gap-2 px-5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <X className="w-4 h-4" /> Close
+                  </button>
+                </div>
               </div>
             </div>
           )}

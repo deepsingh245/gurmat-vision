@@ -96,7 +96,7 @@
     "typePoster": "ਪੋਸਟਰ",
     "typeVideo": "ਵੀਡੀਓ",
     "typeReel": "ਰੀਲ",
-    "save": "⬇️ ਸੇਵ ਕਰੋ",
+    "save": "ਸੇਵ ਕਰੋ",
     "confirmDelete": "ਹਾਂ, ਮਿਟਾਓ",
     "cancel": "ਰੱਦ ਕਰੋ",
     "guestEmpty": "ਇਸ ਸੈਸ਼ਨ ਵਿੱਚ ਹਾਲੇ ਕੋਈ ਰਚਨਾ ਨਹੀਂ",
@@ -209,7 +209,7 @@
     "generatingImage": "ਤਸਵੀਰ ਬਣ ਰਹੀ ਹੈ…",
     "generate_one": "ਬਣਾਓ — {{cost}} ਕ੍ਰੈਡਿਟ",
     "generate_other": "ਬਣਾਓ — {{cost}} ਕ੍ਰੈਡਿਟ",
-    "download": "⬇️ ਡਾਊਨਲੋਡ",
+    "download": "ਡਾਊਨਲੋਡ",
     "redo": "↺ ਦੁਬਾਰਾ",
     "videoNote": "⏳ ਵੀਡੀਓ ਬਣਾਉਣ ਵਿੱਚ 1-2 ਮਿੰਟ ਲੱਗਦੇ ਹਨ। ਕਲਿੱਕ ਕਰਨ ਤੋਂ ਬਾਅਦ ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ।"
   },

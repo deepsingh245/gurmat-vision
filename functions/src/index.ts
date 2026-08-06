@@ -290,13 +290,19 @@ export const hukumnamaGenerateVideo = onCall(
         config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
       });
 
-      while (!operation.done) {
+      const MAX_POLLS = 60;
+      let polls = 0;
+      while (!operation.done && polls < MAX_POLLS) {
         await new Promise(r => setTimeout(r, 5000));
         operation = await client.operations.getVideosOperation({ operation });
+        polls++;
       }
 
+      if (!operation.done) throw new HttpsError('deadline-exceeded', 'Video generation timed out. Please try again.');
+      if (operation.error) throw new HttpsError('internal', `Video generation failed: ${operation.error.message ?? 'unknown error'}`);
+
       const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
+      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no output. The prompt may have been filtered or the model quota exceeded.');
 
       const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
       if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);
@@ -352,13 +358,19 @@ export const hukumnamaGenerateVideoFromImage = onCall(
         config: { numberOfVideos: 1, resolution: '720p', aspectRatio },
       });
 
-      while (!operation.done) {
+      const MAX_POLLS = 60;
+      let polls = 0;
+      while (!operation.done && polls < MAX_POLLS) {
         await new Promise(r => setTimeout(r, 5000));
         operation = await client.operations.getVideosOperation({ operation });
+        polls++;
       }
 
+      if (!operation.done) throw new HttpsError('deadline-exceeded', 'Video generation timed out. Please try again.');
+      if (operation.error) throw new HttpsError('internal', `Video generation failed: ${operation.error.message ?? 'unknown error'}`);
+
       const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no URI');
+      if (!videoUri) throw new HttpsError('internal', 'Video generation produced no output. The prompt may have been filtered or the model quota exceeded.');
 
       const res = await fetch(`${videoUri}&key=${geminiKey.value()}`);
       if (!res.ok) throw new HttpsError('internal', `Video download failed: ${res.status}`);

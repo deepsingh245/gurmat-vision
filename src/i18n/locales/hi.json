@@ -96,7 +96,7 @@
     "typePoster": "पोस्टर",
     "typeVideo": "वीडियो",
     "typeReel": "रील",
-    "save": "⬇️ सेव",
+    "save": "सेव",
     "confirmDelete": "हां, मिटाएं",
     "cancel": "रद्द करें",
     "guestEmpty": "इस सत्र में अभी कोई रचना नहीं",
@@ -209,7 +209,7 @@
     "generatingImage": "छवि बन रही है…",
     "generate_one": "बनाएं — {{cost}} क्रेडिट",
     "generate_other": "बनाएं — {{cost}} क्रेडिट",
-    "download": "⬇️ डाउनलोड",
+    "download": "डाउनलोड",
     "redo": "↺ फिर से",
     "videoNote": "⏳ वीडियो बनाने में 1-2 मिनट लगते हैं। क्लिक करने के बाद कृपया प्रतीक्षा करें।"
   },
