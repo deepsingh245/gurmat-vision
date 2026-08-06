@@ -118,6 +118,31 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     }
   };
 
+  if (isVideo) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm opacity-60">
+        <div className="p-4 flex items-start gap-3">
+          <span className="mt-0.5 shrink-0">
+            {typeof template.icon === 'string'
+              ? <span className="text-2xl">{template.icon}</span>
+              : <template.icon className="w-6 h-6 text-gray-300" />}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-gray-400 text-sm">
+                {t(`templateData.${template.id}.name`, { defaultValue: template.name })}
+              </p>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-400">
+                Coming Soon
+              </span>
+            </div>
+            <p className="text-xs text-gray-300 mt-0.5">Video generation temporarily unavailable</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`bg-white rounded-2xl border transition-shadow ${expanded ? 'border-saffron-300 shadow-lg' : 'border-gray-100 shadow-sm hover:shadow-md'}`}>
       <button
