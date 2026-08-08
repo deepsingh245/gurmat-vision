@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Share2 } from 'lucide-react';
 import { HukumnamaData } from '@/types';
+import { useShare } from '@/hooks/useShare';
 
 interface HukumnamaViewProps {
   data: HukumnamaData | null;
@@ -9,7 +11,14 @@ interface HukumnamaViewProps {
 
 const HukumnamaView: React.FC<HukumnamaViewProps> = ({ data, loading }) => {
   const { t } = useTranslation();
+  const { shareText } = useShare();
   const [language, setLanguage] = useState<'gurmukhi' | 'punjabi' | 'english'>('gurmukhi');
+
+  const handleShare = () => {
+    if (!data) return;
+    const text = `${data.gurmukhi}\n\n${data.punjabi ? data.punjabi + '\n\n' : ''}${data.english}\n\n— Hukumnama AI Studio (${data.date})`;
+    shareText('Hukumnama', text);
+  };
 
   if (loading) {
     return (
@@ -67,6 +76,15 @@ const HukumnamaView: React.FC<HukumnamaViewProps> = ({ data, loading }) => {
         {language === 'english' && (
           <p className="text-lg leading-relaxed font-serif text-gray-800 whitespace-pre-wrap">{data.english}</p>
         )}
+      </div>
+
+      <div className="px-6 pb-5 flex justify-end">
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-saffron-600 border border-saffron-200 hover:bg-saffron-50 transition-colors"
+        >
+          <Share2 className="w-4 h-4" /> Share on WhatsApp
+        </button>
       </div>
     </div>
   );

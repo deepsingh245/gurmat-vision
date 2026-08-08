@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Star, Palette } from 'lucide-react';
+import { Image, Star, Palette, Share2 } from 'lucide-react';
 import { generateStatusImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { HukumnamaData } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useShare } from '@/hooks/useShare';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
@@ -18,11 +19,13 @@ interface StatusGeneratorProps {
 const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumnama: HukumnamaData | null }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
+  const { shareImage } = useShare();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
   const [loading, setLoading]                 = useState(false);
   const [imageUrl, setImageUrl]               = useState<string | null>(null);
+  const [imageDataUri, setImageDataUri]       = useState<string | null>(null);
   const [customPrompt, setCustomPrompt]       = useState('');
   const [size, setSize]                       = useState<'1K' | '2K' | '4K'>('1K');
   const [showTextOverlay, setShowTextOverlay] = useState(true);
@@ -38,11 +41,13 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
     track('generation_start', { type: 'image', credits_before: credits });
     setLoading(true);
     setError(null);
+    setImageDataUri(null);
     try {
       const promptToUse = customPrompt || DEFAULT_IMAGE_PROMPT_TEMPLATE(hukumnama?.summary || 'Sikh spirituality');
       await checkContentPolicy(promptToUse);
-      const { url } = await generateStatusImage(promptToUse, size, '9:16');
+      const { url, dataUri } = await generateStatusImage(promptToUse, size, '9:16');
       setImageUrl(url);
+      setImageDataUri(dataUri);
       saveGeneration(user.uid, 'image', promptToUse, url, CREDIT_COSTS.IMAGE).catch(() => {});
       track('generation_done', { type: 'image', success: 1, credits_used: CREDIT_COSTS.IMAGE });
       window.dispatchEvent(new Event('generation-complete'));
@@ -152,8 +157,13 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
                 </div>
               )}
 
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
                 <Button variant="secondary" onClick={downloadImage}>{t('status.downloadImage')}</Button>
+                {imageDataUri && (
+                  <Button variant="secondary" onClick={() => shareImage(imageDataUri, 'hukumnama-status.png')}>
+                    <Share2 className="w-4 h-4 mr-1" /> Share
+                  </Button>
+                )}
               </div>
             </div>
           </div>

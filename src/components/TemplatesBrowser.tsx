@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Sparkle, ChevronDown, Search, X, Download } from 'lucide-react';
+import { Sparkles, Sparkle, ChevronDown, Search, X, Download, Share2 } from 'lucide-react';
 import { TEMPLATES, CATEGORY_META } from '@/constants/templates';
 import type { ContentTemplate, TemplateCategory } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useShare } from '@/hooks/useShare';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
@@ -27,6 +28,7 @@ type CategoryFilter = 'all' | TemplateCategory;
 const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
+  const { shareImage } = useShare();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -38,9 +40,10 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     });
     return defaults;
   });
-  const [loading, setLoading]         = useState(false);
-  const [result, setResult]           = useState<string | null>(null);
-  const [error, setError]             = useState<string | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [result, setResult]             = useState<string | null>(null);
+  const [resultDataUri, setResultDataUri] = useState<string | null>(null);
+  const [error, setError]               = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const overlayRef                    = useRef<HTMLDivElement>(null);
 
@@ -72,6 +75,7 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
     setLoading(true);
     setError(null);
     setResult(null);
+    setResultDataUri(null);
     try {
       const prompt = interpolate(template.promptTemplate, vars);
       await checkContentPolicy(prompt);
@@ -80,7 +84,9 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
         url = await generateBackgroundVideo(prompt, '9:16');
         saveGeneration(user.uid, 'reel', prompt, url, cost).catch(() => {});
       } else {
-        ({ url } = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16'));
+        const imgResult = await generateStatusImage(prompt, '1K', template.aspectRatio ?? '9:16');
+        url = imgResult.url;
+        setResultDataUri(imgResult.dataUri);
         saveGeneration(user.uid, 'image', prompt, url, cost).catch(() => {});
       }
       setResult(url);
@@ -241,8 +247,16 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
                 >
                   {t('templates.download')}
                 </button>
+                {resultDataUri && (
+                  <button
+                    onClick={() => shareImage(resultDataUri, `${template.id}.png`)}
+                    className="text-xs py-2 px-3 text-saffron-600 hover:text-saffron-800 border border-gray-200 rounded-lg bg-white flex items-center gap-1"
+                  >
+                    <Share2 className="w-3.5 h-3.5" /> Share
+                  </button>
+                )}
                 <button
-                  onClick={() => setResult(null)}
+                  onClick={() => { setResult(null); setResultDataUri(null); }}
                   className="text-xs py-2 px-3 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg bg-white"
                 >
                   {t('templates.redo')}
@@ -279,6 +293,14 @@ const TemplateCard: React.FC<{ template: ContentTemplate }> = ({ template }) => 
                   >
                     <Download className="w-4 h-4" /> {t('templates.download')}
                   </button>
+                  {resultDataUri && (
+                    <button
+                      onClick={() => shareImage(resultDataUri, `${template.id}.png`)}
+                      className="flex items-center gap-2 px-5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" /> Share
+                    </button>
+                  )}
                   <button
                     onClick={() => setLightboxOpen(false)}
                     className="flex items-center gap-2 px-5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-semibold transition-colors"

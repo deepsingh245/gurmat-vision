@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import type { LucideIcon } from 'lucide-react';
-import { Image, Leaf, PenLine, Clapperboard, Video, X, Download, Eye, Trash2, File, Star } from 'lucide-react';
+import { Image, Leaf, PenLine, Clapperboard, Video, X, Download, Eye, Trash2, File, Star, Share2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { getUserGenerations, softDeleteGeneration } from '@/firebase/firestore';
+import { useShare } from '@/hooks/useShare';
 import type { Generation, GenerationType } from '@/types';
 
 interface CreationsPageProps {
@@ -139,6 +140,7 @@ interface CardProps {
 
 const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
   const { t } = useTranslation();
+  const { shareImageUrl } = useShare();
   const color = TYPE_COLOR[item.type] ?? 'bg-gray-50 text-gray-700';
   const TypeIcon = TYPE_ICON[item.type] ?? File;
   const typeKey = `creations.type${item.type.charAt(0).toUpperCase() + item.type.slice(1).replace('-c', 'C')}` as const;
@@ -235,6 +237,13 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
               className="flex-1 text-xs py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded text-gray-600 flex items-center justify-center gap-1"
             >
               <Download className="w-3.5 h-3.5" /> {t('creations.save')}
+            </button>
+            <button
+              onClick={() => shareImageUrl(item.resultUrl, filename)}
+              className="text-xs py-1.5 px-2.5 text-saffron-600 hover:text-saffron-800 hover:bg-saffron-50 border border-gray-200 rounded"
+              title="Share"
+            >
+              <Share2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}

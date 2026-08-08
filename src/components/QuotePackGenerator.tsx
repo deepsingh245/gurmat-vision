@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Leaf, Star, Palette, Clapperboard, Copy } from 'lucide-react';
+import { Leaf, Star, Palette, Clapperboard, Copy, Share2 } from 'lucide-react';
 import { generateQuotePack, generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
 import { GurbaniQuote } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
+import { useShare } from '@/hooks/useShare';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
@@ -14,6 +15,7 @@ import Button from './Button';
 const QuotePackGenerator: React.FC = () => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
+  const { shareImage } = useShare();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -21,7 +23,7 @@ const QuotePackGenerator: React.FC = () => {
   const [quotes, setQuotes]             = useState<GurbaniQuote[]>([]);
   const [loading, setLoading]           = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [mediaUrls, setMediaUrls]       = useState<{ [key: number]: { img?: string; vid?: string } }>({});
+  const [mediaUrls, setMediaUrls]       = useState<{ [key: number]: { img?: string; imgData?: string; vid?: string } }>({});
   const [error, setError]               = useState<string | null>(null);
 
   const handleGenerate = async () => {
@@ -63,8 +65,8 @@ const QuotePackGenerator: React.FC = () => {
     try {
       const quote = quotes[index];
       if (type === 'image') {
-        const { url } = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
-        setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url } }));
+        const { url, dataUri } = await generateStatusImage(quote.imagePrompt, '1K', '1:1');
+        setMediaUrls(prev => ({ ...prev, [index]: { ...prev[index], img: url, imgData: dataUri } }));
         saveGeneration(user.uid, 'quote-card', quote.imagePrompt, url, cost).catch(() => {});
       } else {
         const url = await generateBackgroundVideo(quote.videoPrompt, '9:16');
@@ -154,9 +156,19 @@ const QuotePackGenerator: React.FC = () => {
                 >
                   <Clapperboard className="w-3.5 h-3.5" /> Video (Soon)
                 </button>
+                {mediaUrls[idx]?.imgData && (
+                  <button
+                    onClick={() => shareImage(mediaUrls[idx].imgData!, `quote-${idx}.png`, quote.translation)}
+                    className="py-2 px-3 text-saffron-600 hover:text-saffron-800"
+                    title="Share image"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => { navigator.clipboard.writeText(`${quote.gurmukhi}\n${quote.translation}`); track('share', { type: 'quote', platform: 'clipboard' }); }}
                   className="py-2 px-3 text-gray-500 hover:text-navy-900"
+                  title="Copy text"
                 >
                   <Copy className="w-4 h-4" />
                 </button>

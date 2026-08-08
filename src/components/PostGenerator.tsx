@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PenLine, Star, Download, FileText } from 'lucide-react';
+import { PenLine, Star, Download, FileText, Share2 } from 'lucide-react';
 import { HukumnamaData, GeneratedPost } from '@/types';
 import { SOCIAL_TEMPLATES, CREDIT_COSTS } from '@/constants';
 import { generateSocialPost, generateStatusImage } from '@/services/geminiService';
 import { useCredits } from '@/hooks/useCredits';
+import { useShare } from '@/hooks/useShare';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGuestSession } from '@/contexts/GuestSessionContext';
 import { saveGeneration } from '@/firebase/firestore';
@@ -18,6 +19,7 @@ interface PostGeneratorProps {
 const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
+  const { shareImage } = useShare();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
@@ -260,6 +262,11 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
             <button onClick={handleDownloadComposite} className="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow text-gray-900 hover:bg-white">
               <Download className="w-4 h-4" />
             </button>
+            {generatedImageData && (
+              <button onClick={() => shareImage(generatedImageData, 'post-image.png', generatedPost?.title ?? '')} className="absolute bottom-2 left-2 bg-white/90 p-2 rounded-full shadow text-saffron-600 hover:bg-white">
+                <Share2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="text-center text-gray-400 p-8">
