@@ -10,15 +10,22 @@ All functions are prefixed `hukumnama` to avoid naming conflicts with other proj
 
 | Function name | Trigger | What it does |
 |---|---|---|
-| `hukumnamaGetHukumnama` | `onCall` | Fetches daily Hukumnama via Gemini + Google Search |
-| `hukumnamaGenerateImage` | `onCall` | Generates image via Imagen, uploads to Storage |
-| `hukumnamaGenerateVideo` | `onCall` | Generates video via Veo, uploads to Storage |
-| `hukumnamaGenerateVideoFromImage` | `onCall` | Image-to-video via Veo, uploads to Storage |
+| `hukumnamaGetHukumnama` | `onCall` | Fetches daily Hukamnama via Gemini + Google Search |
+| `hukumnamaGenerateImage` | `onCall` | Generates image via Imagen, uploads to Storage; returns `{ url, dataUri }` |
+| `hukumnamaGenerateVideo` | `onCall` | Generates video via Veo, uploads to Storage (UI disabled — coming soon) |
+| `hukumnamaGenerateVideoFromImage` | `onCall` | Image-to-video via Veo (UI disabled — coming soon) |
 | `hukumnamaGeneratePost` | `onCall` | Generates social post text via Gemini |
 | `hukumnamaGenerateQuotePack` | `onCall` | Generates Gurbani quote pack via Gemini |
 | `hukumnamaProcessVoice` | `onCall` | Parses voice audio to intent via Gemini |
 | `hukumnamaModerateContent` | `onCall` | Content safety pre-check (blocklist + Gemini) |
 | `hukumnamaGrantAdReward` | `onCall` | Grants +5 credits after rewarded ad, rate-limited (3/day) |
+| `hukumnamaAdminGetUsers` | `onCall` | Admin: list users with optional email search |
+| `hukumnamaAdminGetGenerations` | `onCall` | Admin: list generations with type/userId filters |
+| `hukumnamaAdminGetRefusals` | `onCall` | Admin: list moderation refusals |
+| `hukumnamaAdminAdjustCredits` | `onCall` | Admin: adjust a user's credits with audit log |
+| `hukumnamaAdminGetAdStats` | `onCall` | Admin: ad impression and reward stats (last 30 days) |
+
+All generation functions enforce credits, rate limits, and daily caps server-side via `guards.ts`. Admin functions require `ADMIN_UID` secret and reject non-admin callers with `permission-denied`.
 
 ---
 
@@ -36,27 +43,28 @@ cd ..
 
 ### Step 2 — Create the local secrets file
 
-The emulator cannot read from Firebase Secret Manager, so you provide the key in a local file instead. This file is gitignored.
+The emulator cannot read from Firebase Secret Manager, so you provide keys in a local file instead. This file is gitignored.
 
 ```bash
 # Create functions/.env.local
-echo "GEMINI_API_KEY=your_gemini_api_key_here" > functions/.env.local
+GEMINI_API_KEY=your_gemini_api_key_here
+ADMIN_UID=your_firebase_auth_uid_here
 ```
 
-Replace `your_gemini_api_key_here` with your key from [Google AI Studio](https://aistudio.google.com).
+Replace values with your key from [Google AI Studio](https://aistudio.google.com) and your Firebase Auth UID (visible in Firebase Console → Auth → Users).
 
 ### Step 3 — Point the frontend at the emulator
 
-In `src/firebase/config.ts`, add the emulator connection after `initializeApp`. Only do this while testing locally — remove before deploying.
+Set `VITE_USE_EMULATOR=true` in your root `.env.local`. The frontend already handles this automatically:
 
 ```ts
-import { connectFunctionsEmulator } from 'firebase/functions';
-
-// Add this line after: export const functions = getFunctions(app);
-connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+// src/firebase/config.ts — already in place
+if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+}
 ```
 
-> **Important:** Remove or comment out `connectFunctionsEmulator` before running `firebase deploy`. If you leave it in, your production frontend will try to call localhost.
+> **Important:** Set `VITE_USE_EMULATOR=false` (or remove it) before deploying. If left as `true`, the production frontend will try to call localhost.
 
 ### Step 4 — Start the emulator
 
@@ -128,26 +136,29 @@ cd functions && npm run build && cd .. && firebase emulators:start --only functi
 | Issue | Fix |
 |---|---|
 | `GEMINI_API_KEY not set` | Check `functions/.env.local` exists and has the key |
+| `ADMIN_UID not set` | Add `ADMIN_UID=your_uid` to `functions/.env.local` |
 | `Function not found` | Run `npm run build` in `functions/` first |
-| Frontend still hitting production | Confirm `connectFunctionsEmulator` is in `src/firebase/config.ts` |
-| Port 5001 already in use | Run `firebase emulators:start --only functions --port 5002` and update the `connectFunctionsEmulator` call to match |
+| Frontend still hitting production | Confirm `VITE_USE_EMULATOR=true` in root `.env.local` |
+| Port 5001 already in use | Run `firebase emulators:start --only functions --port 5002` and update `connectFunctionsEmulator` port to match |
 
 ---
 
 ## Part 3 — Deploying to production
 
-### One-time setup — store the Gemini API key in Secret Manager
+### One-time setup — store secrets in Secret Manager
 
 ```bash
 firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set ADMIN_UID
 ```
 
-You will be prompted to paste the key. It is encrypted and stored in Google Secret Manager — never in your code or environment files.
+You will be prompted to paste each value. They are encrypted and stored in Google Secret Manager — never in your code or environment files.
 
-To verify it was stored:
+To verify:
 
 ```bash
 firebase functions:secrets:access GEMINI_API_KEY
+firebase functions:secrets:access ADMIN_UID
 ```
 
 ### Deploy functions only
@@ -182,14 +193,7 @@ firebase deploy --only firestore
 
 ### Check deployed functions in the console
 
-After deploying, your functions appear in the Firebase Console under **Functions**. They will all be prefixed `hukumnama`:
-
-```
-hukumnamaGetHukumnama
-hukumnamaGenerateImage
-hukumnamaGenerateVideo
-...
-```
+After deploying, your functions appear in the Firebase Console under **Functions**. They will all be prefixed `hukumnama`.
 
 ### View production logs
 
@@ -207,10 +211,13 @@ firebase functions:log --only hukumnamaGenerateImage
 
 ## Part 4 — Before going live checklist
 
-- [ ] `connectFunctionsEmulator` removed from `src/firebase/config.ts`
+- [ ] `VITE_USE_EMULATOR` removed or set to `false` in root `.env.local`
 - [ ] `GEMINI_API_KEY` set in Secret Manager (`firebase functions:secrets:access GEMINI_API_KEY` to verify)
+- [ ] `ADMIN_UID` set in Secret Manager (`firebase functions:secrets:access ADMIN_UID` to verify)
+- [ ] `VITE_ADMIN_UID` set in root `.env` (controls admin nav visibility in frontend)
 - [ ] `.env` has all `VITE_FIREBASE_*` values
 - [ ] Firestore rules deployed (`firebase deploy --only firestore`)
+- [ ] Firestore indexes deployed (`firebase deploy --only firestore:indexes`)
 - [ ] Firebase Auth has Google and Email/Password providers enabled
 - [ ] Firebase project is on the Blaze plan
 - [ ] Storage is enabled in the Firebase Console
@@ -223,11 +230,13 @@ firebase functions:log --only hukumnamaGenerateImage
 ```
 functions/
   src/
-    index.ts          Main functions file — all hukumnama* exports
-    ads.ts            hukumnamaGrantAdReward
-    moderation.ts     Blocklist + Gemini safety check (not exported, used internally)
-  lib/                Compiled output — gitignored, auto-generated by npm run build
-  .env.local          Local secrets — gitignored, never commit this
+    index.ts        Main functions file — all hukumnama* exports
+    guards.ts       Server-side credit deduction, rate limiting, daily caps, input validation
+    admin.ts        hukumnamaAdmin* functions — UID-gated, Admin SDK queries
+    ads.ts          hukumnamaGrantAdReward
+    moderation.ts   Blocklist + Gemini safety check (not exported — used internally)
+  lib/              Compiled output — gitignored, auto-generated by npm run build
+  .env.local        Local secrets (GEMINI_API_KEY, ADMIN_UID) — gitignored, never commit
   package.json
   tsconfig.json
 ```

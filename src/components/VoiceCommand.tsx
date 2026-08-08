@@ -1,20 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mic, Square, Loader2 } from 'lucide-react';
+import { Mic, Square, Loader2, Zap } from 'lucide-react';
 import { VoiceRecorder } from '@/services/voiceRecorder';
 import { processVoiceIntent } from '@/services/geminiService';
 import { VoiceIntentResult } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from './Button';
 
+const INTENT_LABELS: Record<string, string> = {
+  create_quote_pack:     'Quotes',
+  create_status_image:   'Status Image',
+  create_hukumnama_post: 'Post',
+  create_video:          'Video',
+};
+
 const VoiceCommand: React.FC = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [recording, setRecording]   = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [executing, setExecuting]   = useState(false);
   const [result, setResult]         = useState<VoiceIntentResult | null>(null);
   const [error, setError]           = useState<string | null>(null);
-  const recorder = React.useRef(new VoiceRecorder());
+  const recorder = useRef(new VoiceRecorder());
+  const execTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (execTimer.current) clearTimeout(execTimer.current); }, []);
 
   if (!user) {
     return (
@@ -28,6 +39,13 @@ const VoiceCommand: React.FC = () => {
     );
   }
 
+  const dispatchIntent = (response: VoiceIntentResult) => {
+    setExecuting(true);
+    execTimer.current = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('hukumnama:voice-intent', { detail: response }));
+    }, 1500);
+  };
+
   const toggleRecording = async () => {
     if (recording) {
       setRecording(false);
@@ -37,6 +55,9 @@ const VoiceCommand: React.FC = () => {
         const audioBlob = await recorder.current.stop();
         const response = await processVoiceIntent(audioBlob);
         setResult(response);
+        if (response.intent !== 'unknown') {
+          dispatchIntent(response);
+        }
       } catch (e) {
         console.error(e);
         setError(t('voice.errorProcess'));
@@ -49,6 +70,8 @@ const VoiceCommand: React.FC = () => {
         setRecording(true);
         setResult(null);
         setError(null);
+        setExecuting(false);
+        if (execTimer.current) clearTimeout(execTimer.current);
       } catch {
         setError(t('voice.errorMic'));
       }
@@ -121,8 +144,24 @@ const VoiceCommand: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4">
-            <p className="text-xs text-gray-400 text-center">{t('voice.switchTabHint')}</p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            {result.intent === 'unknown' ? (
+              <p className="text-xs text-red-500 text-center">Couldn't understand the command — please try again.</p>
+            ) : executing ? (
+              <>
+                <Loader2 className="w-4 h-4 text-saffron-500 animate-spin" />
+                <p className="text-xs text-saffron-600 font-medium">
+                  Switching to {INTENT_LABELS[result.intent] ?? result.intent}…
+                </p>
+              </>
+            ) : (
+              <button
+                onClick={() => dispatchIntent(result)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-saffron-500 hover:bg-saffron-600 px-4 py-2 rounded-full transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5" /> Execute
+              </button>
+            )}
           </div>
         </div>
       )}

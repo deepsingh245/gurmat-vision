@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PenLine, Star, Download, FileText, Share2 } from 'lucide-react';
-import { HukumnamaData, GeneratedPost } from '@/types';
+import { HukumnamaData, GeneratedPost, VoiceIntentResult } from '@/types';
 import { SOCIAL_TEMPLATES, CREDIT_COSTS } from '@/constants';
 import { generateSocialPost, generateStatusImage } from '@/services/geminiService';
 import { useCredits } from '@/hooks/useCredits';
@@ -14,9 +14,10 @@ import Button from './Button';
 
 interface PostGeneratorProps {
   hukumnama: HukumnamaData | null;
+  voiceIntent?: VoiceIntentResult;
 }
 
-const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
+const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama, voiceIntent }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
   const { shareImage } = useShare();
@@ -24,7 +25,10 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
   const { addGuestGeneration } = useGuestSession();
 
   const [selectedTemplate, setSelectedTemplate] = useState(SOCIAL_TEMPLATES[0].id);
-  const [language, setLanguage]                 = useState('English');
+  const [language, setLanguage]                 = useState(
+    voiceIntent?.parameters?.language === 'punjabi' ? 'Punjabi' : 'English'
+  );
+  const didAutoGen = useRef(false);
   const [loading, setLoading]                   = useState(false);
   const [generatedPost, setGeneratedPost]       = useState<GeneratedPost | null>(null);
   const [generatedImage, setGeneratedImage]     = useState<string | null>(null);
@@ -57,6 +61,14 @@ const PostGenerator: React.FC<PostGeneratorProps> = ({ hukumnama }) => {
       await refresh();
     }
   };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!didAutoGen.current && voiceIntent && hukumnama && user) {
+      didAutoGen.current = true;
+      handleGenerateText();
+    }
+  }, []); // runs once on mount — auto-triggers when navigated from voice command
 
   const handleDownloadComposite = async () => {
     if (!generatedImageData || !generatedPost) return;

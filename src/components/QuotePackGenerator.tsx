@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Leaf, Star, Palette, Clapperboard, Copy, Share2 } from 'lucide-react';
 import { generateQuotePack, generateStatusImage, generateBackgroundVideo, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
-import { GurbaniQuote } from '@/types';
+import { GurbaniQuote, VoiceIntentResult } from '@/types';
 import { CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useShare } from '@/hooks/useShare';
@@ -12,19 +12,24 @@ import { saveGeneration } from '@/firebase/firestore';
 import { track } from '@/firebase/analytics';
 import Button from './Button';
 
-const QuotePackGenerator: React.FC = () => {
+interface QuotePackGeneratorProps {
+  voiceIntent?: VoiceIntentResult;
+}
+
+const QuotePackGenerator: React.FC<QuotePackGeneratorProps> = ({ voiceIntent }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
   const { shareImage } = useShare();
   const { user } = useAuth();
   const { addGuestGeneration } = useGuestSession();
 
-  const [topic, setTopic]               = useState('');
+  const [topic, setTopic]               = useState(voiceIntent?.parameters?.topic ?? '');
   const [quotes, setQuotes]             = useState<GurbaniQuote[]>([]);
   const [loading, setLoading]           = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [mediaUrls, setMediaUrls]       = useState<{ [key: number]: { img?: string; imgData?: string; vid?: string } }>({});
   const [error, setError]               = useState<string | null>(null);
+  const didAutoGen                      = useRef(false);
 
   const handleGenerate = async () => {
     if (!topic) return;
@@ -51,6 +56,14 @@ const QuotePackGenerator: React.FC = () => {
       await refresh();
     }
   };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!didAutoGen.current && voiceIntent?.parameters?.topic && user) {
+      didAutoGen.current = true;
+      handleGenerate();
+    }
+  }, []); // runs once on mount — auto-triggers when navigated from voice command
 
   const generateMedia = async (index: number, type: 'image' | 'video') => {
     if (!user) { window.dispatchEvent(new Event('hukumnama:require-auth')); return; }

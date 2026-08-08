@@ -81,7 +81,10 @@ interface HukumnamaDoc {
   english: string;
   summary: string;
   date: string;
+  dateIso: string; // YYYY-MM-DD IST — guards against stale cache written before API updates
 }
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
   const res = await withRetry(() => fetch(GURBANINOW_API));
@@ -90,10 +93,22 @@ async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
   const data = await res.json() as GurbaniNowResponse;
   if (data.error) throw new HttpsError('unavailable', 'Hukamnama source returned an error');
 
+  const { month, date: day, year } = data.date.gregorian;
+
+  // Guard: throw before the expensive AI call if the API hasn't updated yet.
+  // This prevents caching yesterday's Hukamnama under today's Firestore key.
+  const [kyear, kmonth, kday] = dateKey.split('-').map(Number);
+  const apiMonth = MONTH_NAMES.indexOf(month) + 1;
+  if (year !== kyear || apiMonth !== kmonth || day !== kday) {
+    throw new HttpsError(
+      'not-found',
+      `Hukamnama for ${dateKey} not yet published (API returned ${month} ${day}, ${year})`
+    );
+  }
+
   const gurmukhi   = data.hukamnama.map(h => h.line.gurmukhi.unicode).filter(Boolean).join(' ');
   let   punjabi    = data.hukamnama.map(h => firstValue(h.line.translation.punjabi)).filter(Boolean).join(' ');
   const english    = data.hukamnama.map(h => firstValue(h.line.translation.english)).filter(Boolean).join(' ');
-  const { month, date: day, year } = data.date.gregorian;
 
   let summary = '';
   try {
@@ -114,7 +129,7 @@ async function fetchAndCacheHukamnama(dateKey: string): Promise<HukumnamaDoc> {
     if (parsed.punjabi && !punjabi) punjabi = parsed.punjabi;
   } catch { /* non-critical — Hukamnama text still returned without AI enrichment */ }
 
-  const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}` };
+  const doc: HukumnamaDoc = { gurmukhi, punjabi, english, summary, date: `${month} ${day}, ${year}`, dateIso: dateKey };
   try {
     await admin.firestore().collection('hukamnama').doc(dateKey).set(doc);
   } catch { /* non-critical */ }
@@ -185,13 +200,15 @@ export const hukumnamaGetHukumnama = onCall(
     const db = admin.firestore();
     const dateKey = todayKeyIST();
     const cached = await db.collection('hukamnama').doc(dateKey).get();
-    if (cached.exists) return cached.data() as HukumnamaDoc;
+    // Only trust the cache if dateIso matches — catches docs written by an
+    // early scheduled run before the GurbaniNow API had updated for the day.
+    if (cached.exists && cached.data()?.dateIso === dateKey) return cached.data() as HukumnamaDoc;
 
-    // Live fetch with internal retries (withRetry wraps the external API call)
+    // Live fetch (also validates API date before caching)
     try {
       return await fetchAndCacheHukamnama(dateKey);
     } catch {
-      // All retries exhausted — serve yesterday's doc rather than a hard error
+      // API not yet updated or all retries exhausted — serve yesterday's doc
       const prev = await db.collection('hukamnama').doc(yesterdayKeyIST()).get();
       if (prev.exists) return prev.data() as HukumnamaDoc;
       throw new HttpsError('unavailable', 'Hukamnama is temporarily unavailable. Please try again later.');
@@ -199,10 +216,12 @@ export const hukumnamaGetHukumnama = onCall(
   }
 );
 
-// ─── scheduledFetch — runs 6:05 AM IST daily, populates Firestore cache ───────
+// ─── scheduledFetch — runs 7:35 AM IST daily, populates Firestore cache ───────
+// Runs after 6:05 AM IST (previous trigger was too early — GurbaniNow API had
+// not yet updated, causing yesterday's Hukamnama to be cached under today's key).
 
 export const hukumnamaScheduledFetch = onSchedule(
-  { schedule: '5 6 * * *', timeZone: 'Asia/Kolkata', secrets: [geminiKey] },
+  { schedule: '35 7 * * *', timeZone: 'Asia/Kolkata', secrets: [geminiKey] },
   async () => {
     await fetchAndCacheHukamnama(todayKeyIST());
   }

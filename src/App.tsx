@@ -10,7 +10,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { GuestSessionProvider, useGuestSession } from '@/contexts/GuestSessionContext';
 import { fetchHukumnamaWithGemini } from '@/services/geminiService';
-import type { HukumnamaData } from '@/types';
+import type { HukumnamaData, VoiceIntentResult } from '@/types';
 
 import AuthPage            from '@/pages/AuthPage';
 import ProfilePage         from '@/pages/ProfilePage';
@@ -134,11 +134,19 @@ const GuestHeader: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigat
 
 // ─── Main studio (content creation) ─────────────────────────────────────────
 
+const VOICE_TAB_MAP: Record<string, string> = {
+  create_quote_pack:     'quotes',
+  create_status_image:   'status',
+  create_hukumnama_post: 'post',
+  create_video:          'video',
+};
+
 const Studio: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('hukumnama');
-  const [hukumnama, setHukumnama] = useState<HukumnamaData | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [activeTab, setActiveTab]               = useState('hukumnama');
+  const [hukumnama, setHukumnama]               = useState<HukumnamaData | null>(null);
+  const [loading, setLoading]                   = useState(true);
+  const [pendingVoiceIntent, setPendingVoiceIntent] = useState<VoiceIntentResult | null>(null);
 
   const STUDIO_TABS = [
     { id: 'hukumnama', label: t('tabs.hukumnama'), icon: ScrollText },
@@ -155,6 +163,19 @@ const Studio: React.FC = () => {
       .then(setHukumnama)
       .catch(e => console.error('Failed to fetch hukumnama', e))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const result = (e as CustomEvent<VoiceIntentResult>).detail;
+      const tab = VOICE_TAB_MAP[result.intent];
+      if (!tab) return;
+      setPendingVoiceIntent(result);
+      setActiveTab(tab);
+      setTimeout(() => setPendingVoiceIntent(null), 3000);
+    };
+    window.addEventListener('hukumnama:voice-intent', handler);
+    return () => window.removeEventListener('hukumnama:voice-intent', handler);
   }, []);
 
   return (
@@ -187,10 +208,10 @@ const Studio: React.FC = () => {
         )}
         {activeTab === 'templates' && <TemplatesBrowser />}
         {activeTab === 'voice'   && <VoiceCommand />}
-        {activeTab === 'post'    && <PostGenerator hukumnama={hukumnama} />}
-        {activeTab === 'quotes'  && <QuotePackGenerator />}
-        {activeTab === 'status'  && <StatusGenerator hukumnama={hukumnama} />}
-        {activeTab === 'video'   && <VideoGenerator hukumnama={hukumnama} />}
+        {activeTab === 'post'    && <PostGenerator    hukumnama={hukumnama} voiceIntent={pendingVoiceIntent ?? undefined} />}
+        {activeTab === 'quotes'  && <QuotePackGenerator                     voiceIntent={pendingVoiceIntent ?? undefined} />}
+        {activeTab === 'status'  && <StatusGenerator  hukumnama={hukumnama} voiceIntent={pendingVoiceIntent ?? undefined} />}
+        {activeTab === 'video'   && <VideoGenerator   hukumnama={hukumnama} />}
       </div>
     </>
   );

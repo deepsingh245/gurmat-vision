@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Star, Palette, Share2 } from 'lucide-react';
 import { generateStatusImage, checkContentPolicy, ContentRejectedError } from '@/services/geminiService';
-import { HukumnamaData } from '@/types';
+import { HukumnamaData, VoiceIntentResult } from '@/types';
 import { DEFAULT_IMAGE_PROMPT_TEMPLATE, CREDIT_COSTS } from '@/constants';
 import { useCredits } from '@/hooks/useCredits';
 import { useShare } from '@/hooks/useShare';
@@ -14,9 +14,10 @@ import Button from './Button';
 
 interface StatusGeneratorProps {
   hukumnama: HukumnamaData | null;
+  voiceIntent?: VoiceIntentResult;
 }
 
-const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumnama: HukumnamaData | null }) => {
+const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama, voiceIntent }) => {
   const { t } = useTranslation();
   const { credits, canAfford, refresh } = useCredits();
   const { shareImage } = useShare();
@@ -26,10 +27,11 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
   const [loading, setLoading]                 = useState(false);
   const [imageUrl, setImageUrl]               = useState<string | null>(null);
   const [imageDataUri, setImageDataUri]       = useState<string | null>(null);
-  const [customPrompt, setCustomPrompt]       = useState('');
+  const [customPrompt, setCustomPrompt]       = useState(voiceIntent?.suggestedPrompt ?? '');
   const [size, setSize]                       = useState<'1K' | '2K' | '4K'>('1K');
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const [error, setError]                     = useState<string | null>(null);
+  const didAutoGen                            = useRef(false);
 
   const handleGenerate = async () => {
     if (!hukumnama && !customPrompt) return;
@@ -59,6 +61,14 @@ const StatusGenerator: React.FC<StatusGeneratorProps> = ({ hukumnama }: { hukumn
       await refresh();
     }
   };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!didAutoGen.current && voiceIntent?.suggestedPrompt && user) {
+      didAutoGen.current = true;
+      handleGenerate();
+    }
+  }, []); // runs once on mount — auto-triggers when navigated from voice command
 
   const downloadImage = () => {
     if (!imageUrl) return;
