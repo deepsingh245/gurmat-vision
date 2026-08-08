@@ -19,3 +19,19 @@
 body {
   background-color: #f8f9fa;
 }
+
+/* Native-app tap feedback — only active inside the packaged Capacitor app */
+.is-native, .is-native * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.is-native button:not(:disabled),
+.is-native .pressable {
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+}
+
+.is-native button:not(:disabled):active,
+.is-native .pressable:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}

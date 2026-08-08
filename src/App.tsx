@@ -169,15 +169,15 @@ const Studio: React.FC = () => {
             <HukumnamaView data={hukumnama} loading={loading} />
             {!loading && (
               <div className="mt-8 grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('post')}>
+                <div className="pressable bg-blue-50 p-4 rounded-xl border border-blue-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('post')}>
                   <h3 className="font-bold text-blue-900 mb-1 flex items-center gap-1.5"><PenLine className="w-4 h-4" /> {t('quickActions.writePost')}</h3>
                   <p className="text-xs text-blue-700">{t('quickActions.writePostDesc')}</p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('video')}>
+                <div className="pressable bg-purple-50 p-4 rounded-xl border border-purple-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('video')}>
                   <h3 className="font-bold text-purple-900 mb-1 flex items-center gap-1.5"><Video className="w-4 h-4" /> {t('quickActions.createVideo')}</h3>
                   <p className="text-xs text-purple-700">{t('quickActions.createVideoDesc')}</p>
                 </div>
-                <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('quotes')}>
+                <div className="pressable bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveTab('quotes')}>
                   <h3 className="font-bold text-green-900 mb-1 flex items-center gap-1.5"><Leaf className="w-4 h-4" /> {t('quickActions.getQuotes')}</h3>
                   <p className="text-xs text-green-700">{t('quickActions.getQuotesDesc')}</p>
                 </div>

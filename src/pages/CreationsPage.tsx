@@ -177,7 +177,7 @@ const GenerationCard: React.FC<CardProps> = ({ item, onDelete, onOpen }) => {
     <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 flex flex-col group">
       {/* Media preview — click opens lightbox */}
       <div
-        className="relative aspect-square bg-gray-100 overflow-hidden cursor-zoom-in"
+        className="pressable relative aspect-square bg-gray-100 overflow-hidden cursor-zoom-in"
         onClick={() => onOpen(item)}
       >
         {isVideo ? (
